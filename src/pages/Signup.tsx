@@ -5,26 +5,27 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/store/authStore';
-import { loginSchema, LoginInput } from '@/lib/validations/auth';
+import { signupSchema, SignupInput } from '@/lib/validations/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 
-const Login = () => {
+const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<SignupInput>({
+    resolver: zodResolver(signupSchema),
   });
 
   useEffect(() => {
@@ -33,28 +34,34 @@ const Login = () => {
     }
   }, [user, navigate]);
 
-  const onSubmit = async (data: LoginInput) => {
+  const onSubmit = async (data: SignupInput) => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/onboarding/welcome`,
+          data: {
+            full_name: data.fullName,
+          },
+        },
       });
 
       if (error) {
         toast({
           variant: 'destructive',
-          title: 'Login failed',
+          title: 'Signup failed',
           description: error.message,
         });
         return;
       }
 
       toast({
-        title: 'Welcome back!',
-        description: 'You have successfully signed in.',
+        title: 'Account created!',
+        description: 'Please check your email to verify your account.',
       });
-      navigate('/dashboard');
+      navigate('/onboarding/welcome');
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -71,10 +78,23 @@ const Login = () => {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-primary">TaskHive</h1>
-          <p className="mt-2 text-muted-foreground">Sign in to your account</p>
+          <p className="mt-2 text-muted-foreground">Create your account</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="fullName">Full Name</Label>
+            <Input
+              id="fullName"
+              placeholder="John Doe"
+              {...register('fullName')}
+              disabled={isLoading}
+            />
+            {errors.fullName && (
+              <p className="text-sm text-destructive">{errors.fullName.message}</p>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -113,33 +133,52 @@ const Login = () => {
             )}
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Checkbox id="remember" {...register('remember')} />
-              <label
-                htmlFor="remember"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                {...register('confirmPassword')}
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                disabled={isLoading}
               >
-                Remember me
-              </label>
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
-            <Link
-              to="/reset-password"
-              className="text-sm text-primary hover:underline"
-            >
-              Forgot password?
-            </Link>
+            {errors.confirmPassword && (
+              <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+            )}
           </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox id="acceptTerms" {...register('acceptTerms')} />
+            <label
+              htmlFor="acceptTerms"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              I accept the terms and conditions
+            </label>
+          </div>
+          {errors.acceptTerms && (
+            <p className="text-sm text-destructive">{errors.acceptTerms.message}</p>
+          )}
 
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Sign in
+            Sign up
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">
-            Don't have an account?{' '}
-            <Link to="/signup" className="text-primary hover:underline">
-              Sign up
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary hover:underline">
+              Sign in
             </Link>
           </p>
         </form>
@@ -148,4 +187,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Signup;
