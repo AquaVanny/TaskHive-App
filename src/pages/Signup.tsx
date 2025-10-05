@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,9 +23,13 @@ const Signup = () => {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
+    defaultValues: {
+      acceptTerms: false,
+    },
   });
 
   useEffect(() => {
@@ -157,18 +161,31 @@ const Signup = () => {
             )}
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox id="acceptTerms" {...register('acceptTerms')} />
-            <label
-              htmlFor="acceptTerms"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              I accept the terms and conditions
-            </label>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Controller
+                name="acceptTerms"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id="acceptTerms"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    disabled={isLoading}
+                  />
+                )}
+              />
+              <label
+                htmlFor="acceptTerms"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                I accept the terms and conditions
+              </label>
+            </div>
+            {errors.acceptTerms && (
+              <p className="text-sm text-destructive">{errors.acceptTerms.message}</p>
+            )}
           </div>
-          {errors.acceptTerms && (
-            <p className="text-sm text-destructive">{errors.acceptTerms.message}</p>
-          )}
 
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
