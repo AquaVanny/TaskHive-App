@@ -1,14 +1,23 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
+import { notificationService } from '@/services/notificationService';
 
 type Organization = Database['public']['Tables']['organizations']['Row'];
 type OrganizationInsert = Database['public']['Tables']['organizations']['Insert'];
 type OrganizationMember = Database['public']['Tables']['organization_members']['Row'];
 
+interface MemberWithProfile extends OrganizationMember {
+  profiles?: {
+    full_name: string;
+    email: string;
+    avatar_url: string | null;
+  };
+}
+
 interface OrganizationsState {
   organizations: Organization[];
-  members: OrganizationMember[];
+  members: MemberWithProfile[];
   loading: boolean;
   fetchOrganizations: () => Promise<void>;
   fetchMembers: (organizationId: string) => Promise<void>;
@@ -16,6 +25,8 @@ interface OrganizationsState {
   joinOrganization: (inviteCode: string) => Promise<boolean>;
   leaveOrganization: (organizationId: string) => Promise<void>;
   updateOrganization: (id: string, updates: Partial<Organization>) => Promise<void>;
+  updateMemberRole: (organizationId: string, userId: string, role: string) => Promise<void>;
+  removeMember: (organizationId: string, userId: string) => Promise<void>;
 }
 
 export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
@@ -70,7 +81,14 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('organization_members')
-        .select('*')
+        .select(`
+          *,
+          profiles:user_id (
+            full_name,
+            email,
+            avatar_url
+          )
+        `)
         .eq('organization_id', organizationId);
 
       if (error) throw error;
@@ -116,15 +134,20 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
       const { data: session } = await supabase.auth.getSession();
       if (!session.session?.user) throw new Error('Not authenticated');
 
+      // Trim and normalize the invite code
+      const normalizedCode = inviteCode.trim().toLowerCase();
+
       // Find organization by invite code
       const { data: org, error: orgError } = await supabase
         .from('organizations')
         .select('*')
-        .eq('invite_code', inviteCode)
+        .ilike('invite_code', normalizedCode)
         .single();
 
-      if (orgError) throw orgError;
-      if (!org) return false;
+      if (orgError || !org) {
+        console.error('Organization not found:', orgError);
+        return false;
+      }
 
       // Check if already a member
       const { data: existingMember } = await supabase
@@ -148,6 +171,14 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
         });
 
       if (memberError) throw memberError;
+
+      // Send notification to organization owner
+      await notificationService.createNotification({
+        user_id: org.owner_id,
+        message: `A new member joined ${org.name}`,
+        type: 'member_added',
+        organization_id: org.id,
+      });
 
       set({ organizations: [org, ...get().organizations] });
       return true;
@@ -195,6 +226,50 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
       });
     } catch (error) {
       console.error('Error updating organization:', error);
+      throw error;
+    }
+  },
+
+  updateMemberRole: async (organizationId: string, userId: string, role: string) => {
+    try {
+      const { error } = await supabase
+        .from('organization_members')
+        .update({ role })
+        .eq('organization_id', organizationId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      // Refresh members
+      await get().fetchMembers(organizationId);
+    } catch (error) {
+      console.error('Error updating member role:', error);
+      throw error;
+    }
+  },
+
+  removeMember: async (organizationId: string, userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('organization_members')
+        .delete()
+        .eq('organization_id', organizationId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      // Send notification to removed member
+      await notificationService.createNotification({
+        user_id: userId,
+        message: 'You have been removed from an organization',
+        type: 'member_removed',
+        organization_id: organizationId,
+      });
+
+      // Refresh members
+      await get().fetchMembers(organizationId);
+    } catch (error) {
+      console.error('Error removing member:', error);
       throw error;
     }
   },

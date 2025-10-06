@@ -1,6 +1,80 @@
 import { supabase } from '@/integrations/supabase/client';
 
+export interface Notification {
+  id: string;
+  user_id: string;
+  message: string;
+  type: 'task_created' | 'task_assigned' | 'task_completed' | 'member_added' | 'member_removed';
+  organization_id?: string;
+  task_id?: string;
+  created_at: string;
+  read: boolean;
+}
+
 export const notificationService = {
+  async createNotification(notification: Omit<Notification, 'id' | 'created_at' | 'read'>) {
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert(notification)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async getNotifications(userId: string) {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data as Notification[];
+  },
+
+  async markAsRead(notificationId: string) {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', notificationId);
+
+    if (error) throw error;
+  },
+
+  async markAllAsRead(userId: string) {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', userId)
+      .eq('read', false);
+
+    if (error) throw error;
+  },
+
+  subscribeToNotifications(userId: string, callback: (notification: Notification) => void) {
+    const channel = supabase
+      .channel(`notifications-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          callback(payload.new as Notification);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  },
+
   async requestPermission(): Promise<boolean> {
     if (!('Notification' in window)) {
       console.warn('This browser does not support notifications');
@@ -110,5 +184,28 @@ export const notificationService = {
       body: `${habitName} - ${streak} day streak!`,
       icon: '/favicon.ico',
     });
-  }
+  },
+
+  async sendBrowserNotification(title: string, options?: NotificationOptions): Promise<void> {
+    const hasPermission = await this.requestPermission();
+    
+    if (!hasPermission) {
+      return;
+    }
+
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.showNotification(title, {
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          ...options,
+        });
+      });
+    } else {
+      new Notification(title, {
+        icon: '/favicon.ico',
+        ...options,
+      });
+    }
+  },
 };

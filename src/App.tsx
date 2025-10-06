@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import Habits from "./pages/Habits";
 import Organizations from "./pages/Organizations";
+import OrganizationDetails from "./pages/OrganizationDetails";
 import Profile from "./pages/Profile";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
@@ -70,6 +71,7 @@ const App = () => {
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/habits" element={<Habits />} />
               <Route path="/organizations" element={<Organizations />} />
+              <Route path="/organizations/:id" element={<OrganizationDetails />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/settings" element={<Settings />} />

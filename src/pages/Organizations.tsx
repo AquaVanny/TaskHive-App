@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Users, Plus, Copy, UserPlus, LogOut, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, Plus, Copy, UserPlus, LogOut, Settings, ArrowRight } from 'lucide-react';
 import { useOrganizationsStore } from '@/store/organizationsStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import { Loading } from '@/components/Loading';
 import { useAuthStore } from '@/store/authStore';
 
 const Organizations = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const {
     organizations,
@@ -159,26 +161,22 @@ const Organizations = () => {
                   </div>
 
                   <div className="flex gap-2">
-                    {isOwner && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => setSelectedOrg(org)}
-                      >
-                        <Settings className="mr-2 h-4 w-4" />
-                        Manage
-                      </Button>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => navigate(`/organizations/${org.id}`)}
+                    >
+                      <ArrowRight className="mr-2 h-4 w-4" />
+                      View Details
+                    </Button>
                     {!isOwner && (
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1"
                         onClick={() => handleLeave(org.id)}
                       >
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Leave
+                        <LogOut className="h-4 w-4" />
                       </Button>
                     )}
                   </div>

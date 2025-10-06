@@ -66,21 +66,58 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 
   createTask: async (task: TaskInsert) => {
     try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session?.user) throw new Error('Not authenticated');
+
       const { data, error } = await supabase
         .from('tasks')
-        .insert(task)
+        .insert({
+          ...task,
+          user_id: session.session.user.id,
+        })
         .select()
         .single();
 
       if (error) throw error;
       
-      // Optimistically update the state
       set((state) => ({ tasks: [data, ...state.tasks] }));
       
-      // Send notification for task creation
+      // Send in-app notifications
+      if (data.organization_id) {
+        const { data: members } = await supabase
+          .from('organization_members')
+          .select('user_id')
+          .eq('organization_id', data.organization_id);
+
+        if (members) {
+          for (const member of members) {
+            if (member.user_id !== session.session.user.id) {
+              await notificationService.createNotification({
+                user_id: member.user_id,
+                message: `New task created: ${data.title}`,
+                type: 'task_created',
+                organization_id: data.organization_id,
+                task_id: data.id,
+              });
+            }
+          }
+        }
+      }
+
+      if (data.assigned_to && data.assigned_to !== session.session.user.id) {
+        await notificationService.createNotification({
+          user_id: data.assigned_to,
+          message: `You have been assigned a task: ${data.title}`,
+          type: 'task_assigned',
+          organization_id: data.organization_id,
+          task_id: data.id,
+        });
+      }
+      
+      // Browser notification
       await notificationService.notifyTaskCreated(data.title);
       
-      // Schedule reminder if due date exists
+      // Schedule reminder
       if (data.due_date) {
         notificationService.scheduleTaskReminder(data.title, new Date(data.due_date));
       }
@@ -94,18 +131,47 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 
   updateTask: async (id: string, updates: TaskUpdate) => {
     try {
-      const { error } = await supabase
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session?.user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
         .from('tasks')
         .update(updates)
-        .eq('id', id);
+        .eq('id', id)
+        .select()
+        .single();
 
       if (error) throw error;
 
       set({
         tasks: get().tasks.map((task) =>
-          task.id === id ? { ...task, ...updates } : task
+          task.id === id ? data : task
         ),
       });
+
+      // Send notification if task is completed
+      if (updates.status === 'completed') {
+        if (data.user_id !== session.session.user.id) {
+          await notificationService.createNotification({
+            user_id: data.user_id,
+            message: `Task completed: ${data.title}`,
+            type: 'task_completed',
+            organization_id: data.organization_id,
+            task_id: data.id,
+          });
+        }
+      }
+
+      // Send notification if task is assigned
+      if (updates.assigned_to && updates.assigned_to !== data.user_id) {
+        await notificationService.createNotification({
+          user_id: updates.assigned_to,
+          message: `You have been assigned a task: ${data.title}`,
+          type: 'task_assigned',
+          organization_id: data.organization_id,
+          task_id: data.id,
+        });
+      }
     } catch (error) {
       console.error('Error updating task:', error);
       throw error;

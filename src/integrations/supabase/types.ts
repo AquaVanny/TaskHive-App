@@ -82,12 +82,61 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          organization_id: string | null
+          read: boolean | null
+          task_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          organization_id?: string | null
+          read?: boolean | null
+          task_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          organization_id?: string | null
+          read?: boolean | null
+          task_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           id: string
           joined_at: string | null
           organization_id: string
           role: string | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
@@ -95,6 +144,7 @@ export type Database = {
           joined_at?: string | null
           organization_id: string
           role?: string | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
@@ -102,6 +152,7 @@ export type Database = {
           joined_at?: string | null
           organization_id?: string
           role?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
