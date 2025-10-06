@@ -7,6 +7,7 @@ import { FilterBar } from '@/components/FilterBar';
 import { SearchInput } from '@/components/SearchInput';
 import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { EmptyState } from '@/components/EmptyState';
+import { AISuggestions } from '@/components/AISuggestions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -128,6 +129,18 @@ const Habits = () => {
     setIsDialogOpen(true);
   };
 
+  const handleAddRecommendation = async (recommendation: any) => {
+    if (!user) return;
+    await createHabit({
+      name: recommendation.name,
+      description: recommendation.description,
+      frequency: recommendation.frequency,
+      category: recommendation.category,
+      user_id: user.id,
+    });
+    fetchHabits();
+  };
+
   if (loading && habits.length === 0) {
     return <Loading />;
   }
@@ -138,6 +151,13 @@ const Habits = () => {
         <h1 className="text-3xl font-bold">Habits</h1>
         <p className="text-muted-foreground mt-1">Build and track your daily habits</p>
       </div>
+
+      <AISuggestions 
+        type="habits" 
+        context="Help me build better habits" 
+        existingData={habits}
+        onAdd={handleAddRecommendation}
+      />
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <FilterBar

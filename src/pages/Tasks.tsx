@@ -7,6 +7,7 @@ import { FilterBar } from '@/components/FilterBar';
 import { SearchInput } from '@/components/SearchInput';
 import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { EmptyState } from '@/components/EmptyState';
+import { AISuggestions } from '@/components/AISuggestions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -105,6 +106,19 @@ const Tasks = () => {
     setIsDialogOpen(true);
   };
 
+  const handleAddSuggestion = async (suggestion: any) => {
+    if (!user) return;
+    await createTask({
+      title: suggestion.title,
+      description: suggestion.description,
+      priority: suggestion.priority,
+      category: suggestion.category,
+      status: 'pending',
+      user_id: user.id,
+    });
+    fetchTasks();
+  };
+
   if (loading && tasks.length === 0) {
     return <Loading />;
   }
@@ -115,6 +129,13 @@ const Tasks = () => {
         <h1 className="text-3xl font-bold">Tasks</h1>
         <p className="text-muted-foreground mt-1">Manage and organize your tasks</p>
       </div>
+
+      <AISuggestions 
+        type="tasks" 
+        context="Help me stay productive" 
+        existingData={tasks}
+        onAdd={handleAddSuggestion}
+      />
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <FilterBar

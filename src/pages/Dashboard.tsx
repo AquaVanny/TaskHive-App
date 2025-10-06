@@ -1,21 +1,25 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle2, Target, Users, TrendingUp } from 'lucide-react';
+import { CheckCircle2, Target, Users, TrendingUp, Bell } from 'lucide-react';
 import { useTasksStore } from '@/store/tasksStore';
 import { useHabitsStore } from '@/store/habitsStore';
 import { useAuthStore } from '@/store/authStore';
 import { TaskCard } from '@/components/TaskCard';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { notificationService } from '@/services/notificationService';
+import { useToast } from '@/components/ui/use-toast';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { tasks, fetchTasks, toggleTaskStatus, deleteTask } = useTasksStore();
   const { habits, completions, fetchHabits, fetchCompletions, getHabitStreak } = useHabitsStore();
+  const { toast } = useToast();
   
   const [greeting, setGreeting] = useState('');
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
   useEffect(() => {
     fetchTasks();
@@ -26,7 +30,29 @@ const Dashboard = () => {
     if (hour < 12) setGreeting('Good morning');
     else if (hour < 18) setGreeting('Good afternoon');
     else setGreeting('Good evening');
+
+    // Check notification permission
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
   }, [fetchTasks, fetchHabits, fetchCompletions]);
+
+  const requestNotificationPermission = async () => {
+    const granted = await notificationService.requestPermission();
+    if (granted) {
+      setNotificationPermission('granted');
+      toast({
+        title: "Notifications Enabled",
+        description: "You'll now receive reminders for tasks and habits",
+      });
+    } else {
+      toast({
+        title: "Notifications Blocked",
+        description: "Enable notifications in your browser settings",
+        variant: "destructive",
+      });
+    }
+  };
 
   const todayTasks = tasks.filter((task) => {
     if (!task.due_date) return false;
@@ -46,11 +72,19 @@ const Dashboard = () => {
   return (
     <div className="container py-6 space-y-6">
       {/* Welcome Header */}
-      <div>
-        <h1 className="text-3xl font-bold">
-          {greeting}, {user?.user_metadata?.full_name || 'there'}!
-        </h1>
-        <p className="text-muted-foreground mt-1">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">
+            {greeting}, {user?.user_metadata?.full_name || 'there'}!
+          </h1>
+          <p className="text-muted-foreground mt-1">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
+        </div>
+        {notificationPermission !== 'granted' && (
+          <Button onClick={requestNotificationPermission} variant="outline" size="sm">
+            <Bell className="mr-2 h-4 w-4" />
+            Enable Notifications
+          </Button>
+        )}
       </div>
 
       {/* Stats Cards */}

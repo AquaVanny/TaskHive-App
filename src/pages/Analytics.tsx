@@ -4,6 +4,7 @@ import { useHabitsStore } from '@/store/habitsStore';
 import { ProgressChart } from '@/components/charts/ProgressChart';
 import { HabitHeatmap } from '@/components/charts/HabitHeatmap';
 import { AchievementBadge } from '@/components/AchievementBadge';
+import { AIInsights } from '@/components/AIInsights';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, subDays, startOfDay } from 'date-fns';
@@ -25,6 +26,16 @@ const Analytics = () => {
 
   const activeHabits = habits.length;
   const totalCompletions = completions.length;
+
+  // Calculate habit data for AI insights
+  const longestStreak = Math.max(...habits.map(h => {
+    const habitCompletions = completions.filter(c => c.habit_id === h.id);
+    return habitCompletions.length;
+  }), 0);
+  
+  const habitConsistency = habits.length > 0 
+    ? Math.round((totalCompletions / (habits.length * parseInt(period))) * 100) 
+    : 0;
 
   // Generate chart data for tasks
   const days = parseInt(period);
@@ -72,6 +83,21 @@ const Analytics = () => {
         <AchievementBadge type="streak" count={totalCompletions} label="Habit Completions" />
         <AchievementBadge type="team" count={completionRate} label="Completion Rate %" />
       </div>
+
+      {/* AI Insights */}
+      <AIInsights 
+        tasksData={{
+          completed: completedTasks,
+          pending: totalTasks - completedTasks,
+          completionRate
+        }}
+        habitsData={{
+          longestStreak,
+          consistency: habitConsistency,
+          totalCompletions
+        }}
+        timeframe={`${period} days`}
+      />
 
       {/* Charts */}
       <div className="grid gap-6 md:grid-cols-2">
