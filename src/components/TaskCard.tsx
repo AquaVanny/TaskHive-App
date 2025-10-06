@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Clock, Trash2, Edit } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Trash2, Edit, User } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -77,6 +77,13 @@ export const TaskCard = ({ task, onToggle, onEdit, onDelete }: TaskCardProps) =>
               {task.category && (
                 <Badge variant="secondary" className="text-xs">
                   {task.category}
+                </Badge>
+              )}
+
+              {task.assigned_to && (
+                <Badge variant="outline" className="text-xs flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  Assigned
                 </Badge>
               )}
 

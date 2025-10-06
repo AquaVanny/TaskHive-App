@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CheckSquare, Plus } from 'lucide-react';
 import { useTasksStore } from '@/store/tasksStore';
+import { useOrganizationsStore } from '@/store/organizationsStore';
 import { useAuthStore } from '@/store/authStore';
 import { TaskCard } from '@/components/TaskCard';
 import { FilterBar } from '@/components/FilterBar';
@@ -29,18 +30,28 @@ const filterOptions = [
 const Tasks = () => {
   const { user } = useAuthStore();
   const { tasks, loading, fetchTasks, createTask, updateTask, deleteTask, toggleTaskStatus } = useTasksStore();
+  const { organizations, members, fetchOrganizations, fetchMembers } = useOrganizationsStore();
   const { toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>('');
 
-  const { register, handleSubmit, reset, setValue } = useForm();
+  const { register, handleSubmit, reset, setValue, watch } = useForm();
+  const watchOrgId = watch('organization_id');
 
   useEffect(() => {
     fetchTasks();
-  }, [fetchTasks]);
+    fetchOrganizations();
+  }, [fetchTasks, fetchOrganizations]);
+
+  useEffect(() => {
+    if (watchOrgId) {
+      fetchMembers(watchOrgId);
+    }
+  }, [watchOrgId, fetchMembers]);
 
   useEffect(() => {
     if (editingTask) {
@@ -49,10 +60,15 @@ const Tasks = () => {
       setValue('priority', editingTask.priority);
       setValue('category', editingTask.category || '');
       setValue('due_date', editingTask.due_date ? editingTask.due_date.split('T')[0] : '');
+      setValue('organization_id', editingTask.organization_id || '');
+      setValue('assigned_to', editingTask.assigned_to || '');
+      if (editingTask.organization_id) {
+        fetchMembers(editingTask.organization_id);
+      }
     } else {
       reset();
     }
-  }, [editingTask, setValue, reset]);
+  }, [editingTask, setValue, reset, fetchMembers]);
 
   const filteredTasks = tasks.filter((task) => {
     const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -64,18 +80,19 @@ const Tasks = () => {
 
   const onSubmit = async (data: any) => {
     try {
+      const taskData = {
+        ...data,
+        user_id: user?.id,
+        due_date: data.due_date ? new Date(data.due_date).toISOString() : null,
+        organization_id: data.organization_id || null,
+        assigned_to: data.assigned_to || null,
+      };
+
       if (editingTask) {
-        await updateTask(editingTask.id, {
-          ...data,
-          due_date: data.due_date ? new Date(data.due_date).toISOString() : null,
-        });
+        await updateTask(editingTask.id, taskData);
         toast({ title: 'Task updated successfully' });
       } else {
-        const newTask = await createTask({
-          ...data,
-          user_id: user?.id,
-          due_date: data.due_date ? new Date(data.due_date).toISOString() : null,
-        });
+        const newTask = await createTask(taskData);
         
         if (newTask) {
           toast({ title: 'Task created successfully' });
@@ -240,6 +257,54 @@ const Tasks = () => {
               <Label htmlFor="due_date">Due Date</Label>
               <Input id="due_date" type="date" {...register('due_date')} />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="organization_id">Assign to Team (Optional)</Label>
+              <Select 
+                onValueChange={(value) => {
+                  setValue('organization_id', value);
+                  setValue('assigned_to', ''); // Reset assignee when team changes
+                }} 
+                defaultValue={editingTask?.organization_id || ''}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Personal Task</SelectItem>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {watchOrgId && (
+              <div className="space-y-2">
+                <Label htmlFor="assigned_to">Assign to Member</Label>
+                <Select 
+                  onValueChange={(value) => setValue('assigned_to', value)} 
+                  defaultValue={editingTask?.assigned_to || ''}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Unassigned</SelectItem>
+                    {members.map((member) => {
+                      const profile = member.profiles as any;
+                      return (
+                        <SelectItem key={member.user_id} value={member.user_id}>
+                          {profile?.full_name || profile?.email || 'Unknown'}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
