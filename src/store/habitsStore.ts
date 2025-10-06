@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
+import { notificationService } from '@/services/notificationService';
 
 type Habit = Database['public']['Tables']['habits']['Row'];
 type HabitInsert = Database['public']['Tables']['habits']['Insert'];
@@ -17,6 +18,7 @@ interface HabitsState {
   updateHabit: (id: string, updates: HabitUpdate) => Promise<void>;
   deleteHabit: (id: string) => Promise<void>;
   completeHabit: (habitId: string, notes?: string) => Promise<void>;
+  toggleCompletion: (habitId: string) => Promise<void>;
   getHabitStreak: (habitId: string) => number;
 }
 
@@ -141,10 +143,23 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
       if (error) throw error;
 
       set({ completions: [data, ...get().completions] });
+      
+      // Get habit details and current streak
+      const habit = get().habits.find(h => h.id === habitId);
+      const streak = get().getHabitStreak(habitId) + 1; // +1 for the completion we just added
+      
+      // Send notification for habit completion
+      if (habit) {
+        await notificationService.notifyHabitCompleted(habit.name, streak);
+      }
     } catch (error) {
       console.error('Error completing habit:', error);
       throw error;
     }
+  },
+
+  toggleCompletion: async (habitId: string) => {
+    await get().completeHabit(habitId);
   },
 
   getHabitStreak: (habitId: string) => {

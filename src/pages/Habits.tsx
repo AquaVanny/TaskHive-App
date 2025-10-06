@@ -131,14 +131,26 @@ const Habits = () => {
 
   const handleAddRecommendation = async (recommendation: any) => {
     if (!user) return;
-    await createHabit({
-      name: recommendation.name,
-      description: recommendation.description,
-      frequency: recommendation.frequency,
-      category: recommendation.category,
-      user_id: user.id,
-    });
-    fetchHabits();
+    try {
+      await createHabit({
+        name: recommendation.name,
+        description: recommendation.description,
+        frequency: recommendation.frequency,
+        category: recommendation.category,
+        user_id: user.id,
+      });
+      
+      toast({
+        title: "Habit Created",
+        description: `"${recommendation.name}" has been added to your habits`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create habit",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading && habits.length === 0) {

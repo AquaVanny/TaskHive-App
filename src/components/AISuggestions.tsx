@@ -23,9 +23,17 @@ export const AISuggestions = ({ type, context, existingData, onAdd }: AISuggesti
       if (type === 'tasks') {
         const data = await aiService.getTaskSuggestions(context, existingData);
         setSuggestions(data);
+        toast({
+          title: "Suggestions Generated",
+          description: `Generated ${data.length} ${type} suggestions`,
+        });
       } else {
         const data = await aiService.getHabitRecommendations(context, existingData);
         setSuggestions(data);
+        toast({
+          title: "Recommendations Generated",
+          description: `Generated ${data.length} ${type} recommendations`,
+        });
       }
     } catch (error: any) {
       toast({
@@ -41,27 +49,38 @@ export const AISuggestions = ({ type, context, existingData, onAdd }: AISuggesti
   const handleAdd = (item: any) => {
     if (onAdd) {
       onAdd(item);
+      // Clear the suggestion after adding
+      if (type === 'tasks') {
+        setSuggestions((prev) => (prev as TaskSuggestion[]).filter((s) => s !== item));
+      } else {
+        setSuggestions((prev) => (prev as HabitRecommendation[]).filter((s) => s !== item));
+      }
       toast({
-        title: "Added",
-        description: `${type === 'tasks' ? 'Task' : 'Habit'} added successfully`,
+        title: "Added Successfully",
+        description: `${type === 'tasks' ? 'Task' : 'Habit'} added to your list`,
       });
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
+    <Card className="border-primary/20 shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex-1">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Sparkles className="h-5 w-5 text-primary" />
               AI {type === 'tasks' ? 'Task Suggestions' : 'Habit Recommendations'}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="mt-1">
               Get personalized {type === 'tasks' ? 'task' : 'habit'} suggestions powered by AI
             </CardDescription>
           </div>
-          <Button onClick={generateSuggestions} disabled={loading}>
+          <Button 
+            onClick={generateSuggestions} 
+            disabled={loading}
+            className="w-full md:w-auto"
+            size="default"
+          >
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -78,32 +97,43 @@ export const AISuggestions = ({ type, context, existingData, onAdd }: AISuggesti
       </CardHeader>
 
       {suggestions.length > 0 && (
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           {suggestions.map((item, idx) => (
-            <div key={idx} className="p-4 border rounded-lg space-y-2">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h4 className="font-semibold">
+            <div 
+              key={idx} 
+              className="group p-4 border rounded-lg hover:border-primary/40 hover:bg-accent/5 transition-all"
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex-1 space-y-2">
+                  <h4 className="font-semibold text-base">
                     {'title' in item ? item.title : item.name}
                   </h4>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     {item.description}
                   </p>
                   {'benefit' in item && (
-                    <p className="text-sm text-primary mt-2">✨ {item.benefit}</p>
+                    <p className="text-sm text-primary font-medium flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      {item.benefit}
+                    </p>
                   )}
-                  <div className="flex gap-2 mt-2">
-                    <span className="text-xs px-2 py-1 bg-secondary rounded-full">
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <span className="text-xs px-2.5 py-1 bg-primary/10 text-primary rounded-full font-medium">
                       {'priority' in item ? item.priority : item.frequency}
                     </span>
-                    <span className="text-xs px-2 py-1 bg-secondary rounded-full">
+                    <span className="text-xs px-2.5 py-1 bg-secondary rounded-full">
                       {item.category}
                     </span>
                   </div>
                 </div>
                 {onAdd && (
-                  <Button size="sm" variant="ghost" onClick={() => handleAdd(item)}>
-                    <Plus className="h-4 w-4" />
+                  <Button 
+                    size="sm" 
+                    onClick={() => handleAdd(item)}
+                    className="shrink-0"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add
                   </Button>
                 )}
               </div>

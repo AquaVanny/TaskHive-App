@@ -71,12 +71,15 @@ const Tasks = () => {
         });
         toast({ title: 'Task updated successfully' });
       } else {
-        await createTask({
+        const newTask = await createTask({
           ...data,
           user_id: user?.id,
           due_date: data.due_date ? new Date(data.due_date).toISOString() : null,
         });
-        toast({ title: 'Task created successfully' });
+        
+        if (newTask) {
+          toast({ title: 'Task created successfully' });
+        }
       }
       setIsDialogOpen(false);
       setEditingTask(null);
@@ -108,15 +111,29 @@ const Tasks = () => {
 
   const handleAddSuggestion = async (suggestion: any) => {
     if (!user) return;
-    await createTask({
-      title: suggestion.title,
-      description: suggestion.description,
-      priority: suggestion.priority,
-      category: suggestion.category,
-      status: 'pending',
-      user_id: user.id,
-    });
-    fetchTasks();
+    try {
+      const newTask = await createTask({
+        title: suggestion.title,
+        description: suggestion.description,
+        priority: suggestion.priority,
+        category: suggestion.category,
+        status: 'pending',
+        user_id: user.id,
+      });
+      
+      if (newTask) {
+        toast({
+          title: "Task Created",
+          description: `"${suggestion.title}" has been added to your tasks`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create task",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading && tasks.length === 0) {

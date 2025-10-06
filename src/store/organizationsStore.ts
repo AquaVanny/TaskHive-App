@@ -100,7 +100,7 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
       await supabase.from('organization_members').insert({
         organization_id: data.id,
         user_id: session.session.user.id,
-        role: 'admin',
+        role: 'owner',
       });
 
       set({ organizations: [data, ...get().organizations] });

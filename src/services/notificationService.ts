@@ -1,3 +1,5 @@
+import { supabase } from '@/integrations/supabase/client';
+
 export const notificationService = {
   async requestPermission(): Promise<boolean> {
     if (!('Notification' in window)) {
@@ -79,5 +81,34 @@ export const notificationService = {
         tag: `habit-${habitName}`,
       });
     }, timeDiff);
+  },
+
+  // New: Send notification for task events
+  async notifyTaskCreated(taskTitle: string): Promise<void> {
+    await this.sendNotification('Task Created', {
+      body: `New task: "${taskTitle}"`,
+      icon: '/favicon.ico',
+    });
+  },
+
+  async notifyTaskAssigned(taskTitle: string, assignedTo: string): Promise<void> {
+    await this.sendNotification('Task Assigned', {
+      body: `You've been assigned: "${taskTitle}"`,
+      icon: '/favicon.ico',
+    });
+  },
+
+  async notifyTaskCompleted(taskTitle: string): Promise<void> {
+    await this.sendNotification('Task Completed! 🎉', {
+      body: `Great job completing: "${taskTitle}"`,
+      icon: '/favicon.ico',
+    });
+  },
+
+  async notifyHabitCompleted(habitName: string, streak: number): Promise<void> {
+    await this.sendNotification('Habit Completed! 🔥', {
+      body: `${habitName} - ${streak} day streak!`,
+      icon: '/favicon.ico',
+    });
   }
 };

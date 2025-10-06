@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
+import { notificationService } from '@/services/notificationService';
 
 type Task = Database['public']['Tables']['tasks']['Row'];
 type TaskInsert = Database['public']['Tables']['tasks']['Insert'];
@@ -73,11 +74,21 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 
       if (error) throw error;
       
-      set({ tasks: [data, ...get().tasks] });
+      // Optimistically update the state
+      set((state) => ({ tasks: [data, ...state.tasks] }));
+      
+      // Send notification for task creation
+      await notificationService.notifyTaskCreated(data.title);
+      
+      // Schedule reminder if due date exists
+      if (data.due_date) {
+        notificationService.scheduleTaskReminder(data.title, new Date(data.due_date));
+      }
+      
       return data;
     } catch (error) {
       console.error('Error creating task:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -116,6 +127,19 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 
   toggleTaskStatus: async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
-    await get().updateTask(id, { status: newStatus });
+    try {
+      await get().updateTask(id, { status: newStatus });
+      
+      // Send notification when task is completed
+      if (newStatus === 'completed') {
+        const task = get().tasks.find(t => t.id === id);
+        if (task) {
+          await notificationService.notifyTaskCompleted(task.title);
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling task status:', error);
+      throw error;
+    }
   },
 }));
