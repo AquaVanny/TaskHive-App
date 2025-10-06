@@ -30,6 +30,32 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 
       if (error) throw error;
       set({ tasks: data || [] });
+      
+      // Set up real-time subscription
+      const channel = supabase
+        .channel('tasks-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'tasks' },
+          (payload) => {
+            if (payload.eventType === 'INSERT' && payload.new) {
+              set((state) => ({
+                tasks: [payload.new as Task, ...state.tasks]
+              }));
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+              set((state) => ({
+                tasks: state.tasks.map(t => 
+                  t.id === (payload.new as Task).id ? payload.new as Task : t
+                )
+              }));
+            } else if (payload.eventType === 'DELETE' && payload.old) {
+              set((state) => ({
+                tasks: state.tasks.filter(t => t.id !== (payload.old as Task).id)
+              }));
+            }
+          }
+        )
+        .subscribe();
     } catch (error) {
       console.error('Error fetching tasks:', error);
     } finally {

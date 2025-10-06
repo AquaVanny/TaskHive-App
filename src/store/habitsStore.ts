@@ -51,6 +51,22 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
 
       if (error) throw error;
       set({ completions: data || [] });
+      
+      // Set up real-time subscription
+      const channel = supabase
+        .channel('habit-completions-changes')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'habit_completions' },
+          (payload) => {
+            if (payload.new) {
+              set((state) => ({
+                completions: [payload.new as HabitCompletion, ...state.completions]
+              }));
+            }
+          }
+        )
+        .subscribe();
     } catch (error) {
       console.error('Error fetching completions:', error);
     }
