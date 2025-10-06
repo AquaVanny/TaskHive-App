@@ -81,27 +81,31 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('organization_members')
-        .select(`
-          *,
-          profiles:user_id (
-            full_name,
-            email,
-            avatar_url
-          )
-        `)
+        .select('*, profiles!organization_members_user_id_fkey(full_name, email, avatar_url)')
         .eq('organization_id', organizationId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching members:', error);
+        throw error;
+      }
+      
+      console.log('Fetched members:', data);
       set({ members: data || [] });
     } catch (error) {
       console.error('Error fetching members:', error);
+      set({ members: [] });
     }
   },
 
   createOrganization: async (org) => {
     try {
       const { data: session } = await supabase.auth.getSession();
-      if (!session.session?.user) throw new Error('Not authenticated');
+      if (!session.session?.user) {
+        console.error('Not authenticated');
+        throw new Error('Not authenticated');
+      }
+
+      console.log('Creating organization:', org, 'for user:', session.session.user.id);
 
       const { data, error } = await supabase
         .from('organizations')
@@ -112,20 +116,32 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error inserting organization:', error);
+        throw error;
+      }
+
+      console.log('Organization created:', data);
 
       // Add creator as member
-      await supabase.from('organization_members').insert({
-        organization_id: data.id,
-        user_id: session.session.user.id,
-        role: 'owner',
-      });
+      const { error: memberError } = await supabase
+        .from('organization_members')
+        .insert({
+          organization_id: data.id,
+          user_id: session.session.user.id,
+          role: 'owner',
+        });
+
+      if (memberError) {
+        console.error('Error adding member:', memberError);
+        // Don't throw error here, org is already created
+      }
 
       set({ organizations: [data, ...get().organizations] });
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating organization:', error);
-      return null;
+      throw error;
     }
   },
 

@@ -99,12 +99,12 @@ const OrganizationDetails = () => {
                     <Avatar>
                       <AvatarImage src={profile?.avatar_url || undefined} />
                       <AvatarFallback>
-                        {profile?.full_name?.charAt(0) || profile?.email?.charAt(0) || '?'}
+                        {profile?.full_name?.[0] || profile?.email?.[0] || '?'}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="font-medium flex items-center gap-2">
-                        {profile?.full_name || 'Unknown User'}
+                        {profile?.full_name || profile?.email?.split('@')[0] || 'Unknown User'}
                         {isCurrentUser && (
                           <Badge variant="outline" className="text-xs">
                             You
@@ -116,7 +116,7 @@ const OrganizationDetails = () => {
                           </Badge>
                         )}
                       </p>
-                      <p className="text-sm text-muted-foreground">{profile?.email}</p>
+                      <p className="text-sm text-muted-foreground">{profile?.email || 'No email'}</p>
                     </div>
                   </div>
 
@@ -156,7 +156,7 @@ const OrganizationDetails = () => {
                       </>
                     )}
                     {!isOwner && (
-                      <Badge variant="secondary">{member.role}</Badge>
+                      <Badge variant="secondary">{member.role || 'member'}</Badge>
                     )}
                   </div>
                 </div>

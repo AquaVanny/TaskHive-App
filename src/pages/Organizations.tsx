@@ -42,14 +42,28 @@ const Organizations = () => {
 
   const onSubmitCreate = async (data: any) => {
     try {
+      console.log('Form submitted with data:', data);
       const org = await createOrganization(data);
       if (org) {
         toast({ title: 'Organization created successfully' });
         setIsDialogOpen(false);
         reset();
+        // Refresh organizations
+        await fetchOrganizations();
+      } else {
+        toast({ 
+          title: 'Error creating organization', 
+          description: 'Please try again',
+          variant: 'destructive' 
+        });
       }
-    } catch (error) {
-      toast({ title: 'Error creating organization', variant: 'destructive' });
+    } catch (error: any) {
+      console.error('Form submission error:', error);
+      toast({ 
+        title: 'Error creating organization', 
+        description: error.message || 'Please try again',
+        variant: 'destructive' 
+      });
     }
   };
 
