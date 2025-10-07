@@ -262,16 +262,16 @@ const Tasks = () => {
               <Label htmlFor="organization_id">Assign to Team (Optional)</Label>
               <Select 
                 onValueChange={(value) => {
-                  setValue('organization_id', value);
+                  setValue('organization_id', value === 'personal' ? '' : value);
                   setValue('assigned_to', ''); // Reset assignee when team changes
                 }} 
-                defaultValue={editingTask?.organization_id || ''}
+                defaultValue={editingTask?.organization_id || 'personal'}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Personal Task</SelectItem>
+                  <SelectItem value="personal">Personal Task</SelectItem>
                   {organizations.map((org) => (
                     <SelectItem key={org.id} value={org.id}>
                       {org.name}
@@ -281,18 +281,18 @@ const Tasks = () => {
               </Select>
             </div>
 
-            {watchOrgId && (
+            {watchOrgId && watchOrgId !== 'personal' && (
               <div className="space-y-2">
                 <Label htmlFor="assigned_to">Assign to Member</Label>
                 <Select 
-                  onValueChange={(value) => setValue('assigned_to', value)} 
-                  defaultValue={editingTask?.assigned_to || ''}
+                  onValueChange={(value) => setValue('assigned_to', value === 'unassigned' ? '' : value)} 
+                  defaultValue={editingTask?.assigned_to || 'unassigned'}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select member" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {members.map((member) => {
                       const profile = member.profiles as any;
                       return (
