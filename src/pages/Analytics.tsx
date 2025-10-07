@@ -101,17 +101,33 @@ const Analytics = () => {
 
       {/* Charts */}
       <div className="grid gap-6 md:grid-cols-2">
-        <ProgressChart 
-          data={chartData}
-          title="Task Completion Trend"
-          description={`Your progress over the last ${period} days`}
-        />
+        <Card>
+          <CardHeader>
+            <CardTitle>Task Completion Trend</CardTitle>
+            <CardDescription>Your progress over the last {period} days</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ProgressChart 
+              data={chartData}
+              title=""
+              description=""
+            />
+          </CardContent>
+        </Card>
         
-        {habits[0] && (
-          <HabitHeatmap 
-            completions={completions}
-            title="Habit Activity"
-          />
+        {habits.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Habit Activity</CardTitle>
+              <CardDescription>Your habit completion heatmap</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <HabitHeatmap 
+                completions={completions}
+                title=""
+              />
+            </CardContent>
+          </Card>
         )}
       </div>
 

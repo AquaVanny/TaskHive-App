@@ -101,27 +101,47 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session?.user) {
-        console.error('Not authenticated');
         throw new Error('Not authenticated');
       }
 
-      console.log('Creating organization:', org, 'for user:', session.session.user.id);
+      // Generate unique invite code
+      let inviteCode = '';
+      let isUnique = false;
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      while (!isUnique && attempts < maxAttempts) {
+        // Generate a random 8-character code
+        inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+        
+        // Check if code exists
+        const { data: existing } = await supabase
+          .from('organizations')
+          .select('id')
+          .eq('invite_code', inviteCode)
+          .maybeSingle();
+        
+        if (!existing) {
+          isUnique = true;
+        }
+        attempts++;
+      }
+
+      if (!isUnique) {
+        throw new Error('Failed to generate unique invite code. Please try again.');
+      }
 
       const { data, error } = await supabase
         .from('organizations')
         .insert({
           ...org,
           owner_id: session.session.user.id,
+          invite_code: inviteCode,
         })
         .select()
         .single();
 
-      if (error) {
-        console.error('Error inserting organization:', error);
-        throw error;
-      }
-
-      console.log('Organization created:', data);
+      if (error) throw error;
 
       // Add creator as member
       const { error: memberError } = await supabase
@@ -134,7 +154,6 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
 
       if (memberError) {
         console.error('Error adding member:', memberError);
-        // Don't throw error here, org is already created
       }
 
       set({ organizations: [data, ...get().organizations] });
@@ -150,19 +169,17 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
       const { data: session } = await supabase.auth.getSession();
       if (!session.session?.user) throw new Error('Not authenticated');
 
-      // Trim and normalize the invite code
-      const normalizedCode = inviteCode.trim().toLowerCase();
+      const normalizedCode = inviteCode.trim().toUpperCase();
 
       // Find organization by invite code
       const { data: org, error: orgError } = await supabase
         .from('organizations')
         .select('*')
-        .ilike('invite_code', normalizedCode)
-        .single();
+        .eq('invite_code', normalizedCode)
+        .maybeSingle();
 
       if (orgError || !org) {
-        console.error('Organization not found:', orgError);
-        return false;
+        throw new Error('Invalid invite code. Please check and try again.');
       }
 
       // Check if already a member
@@ -174,7 +191,7 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
         .maybeSingle();
 
       if (existingMember) {
-        return false; // Already a member
+        throw new Error('You are already a member of this team.');
       }
 
       // Add as member
@@ -196,11 +213,12 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
         organization_id: org.id,
       });
 
-      set({ organizations: [org, ...get().organizations] });
+      // Refresh organizations list
+      await get().fetchOrganizations();
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error joining organization:', error);
-      return false;
+      throw error;
     }
   },
 

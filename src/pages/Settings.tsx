@@ -15,6 +15,8 @@ const Settings = () => {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [activityStatus, setActivityStatus] = useState(true);
+  const [analytics, setAnalytics] = useState(true);
 
   const handleExportData = () => {
     toast({
@@ -51,7 +53,16 @@ const Settings = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="theme">Color Theme</Label>
-                <Select value={theme} onValueChange={setTheme}>
+                <Select 
+                  value={theme || 'system'} 
+                  onValueChange={(value) => {
+                    setTheme(value);
+                    toast({
+                      title: 'Theme updated',
+                      description: `Theme changed to ${value}`,
+                    });
+                  }}
+                >
                   <SelectTrigger id="theme">
                     <SelectValue placeholder="Select theme" />
                   </SelectTrigger>
@@ -166,7 +177,10 @@ const Settings = () => {
                     Show when you're active to team members
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch 
+                  checked={activityStatus}
+                  onCheckedChange={setActivityStatus}
+                />
               </div>
 
               <div className="flex items-center justify-between">
@@ -176,7 +190,10 @@ const Settings = () => {
                     Help improve TaskHive by sharing usage data
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch 
+                  checked={analytics}
+                  onCheckedChange={setAnalytics}
+                />
               </div>
             </CardContent>
           </Card>

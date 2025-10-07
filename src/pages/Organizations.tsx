@@ -69,20 +69,20 @@ const Organizations = () => {
 
   const onSubmitJoin = async (data: any) => {
     try {
-      const success = await joinOrganization(data.invite_code);
-      if (success) {
-        toast({ title: 'Successfully joined organization' });
-        setIsDialogOpen(false);
-        reset();
-      } else {
-        toast({
-          title: 'Failed to join organization',
-          description: 'Invalid invite code or you are already a member',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      toast({ title: 'Error joining organization', variant: 'destructive' });
+      await joinOrganization(data.invite_code);
+      toast({
+        title: 'Success',
+        description: 'You have successfully joined the team',
+      });
+      setIsDialogOpen(false);
+      reset();
+      await fetchOrganizations();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to join team',
+        variant: 'destructive',
+      });
     }
   };
 

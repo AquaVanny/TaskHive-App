@@ -1,94 +1,118 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bell, CheckCheck, Trash2, Calendar, Users, Target } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-interface Notification {
-  id: string;
-  type: 'task' | 'habit' | 'team';
-  title: string;
-  message: string;
-  timestamp: Date;
-  read: boolean;
-}
-
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'task',
-    title: 'Task Due Soon',
-    message: 'Complete project proposal is due in 2 hours',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'habit',
-    title: 'Habit Reminder',
-    message: "Don't forget your daily reading habit",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60),
-    read: false,
-  },
-  {
-    id: '3',
-    type: 'team',
-    title: 'New Task Assignment',
-    message: 'You were assigned to "Update documentation"',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    read: true,
-  },
-];
+import { useNotificationsStore } from '@/store/notificationsStore';
+import { useAuthStore } from '@/store/authStore';
+import { formatDistanceToNow } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const Notifications = () => {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
-  const [filter, setFilter] = useState<'all' | 'task' | 'habit' | 'team'>('all');
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const { toast } = useToast();
+  const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead } = useNotificationsStore();
+  const [filter, setFilter] = useState<'all' | 'task_created' | 'task_assigned' | 'task_completed' | 'member_added'>('all');
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  useEffect(() => {
+    if (user?.id) {
+      fetchNotifications(user.id);
+    }
+  }, [user?.id, fetchNotifications]);
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, read: true } : n))
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
-
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-
-  const clearAll = () => {
-    setNotifications([]);
-  };
-
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'task':
-        return <Calendar className="h-5 w-5" />;
-      case 'habit':
-        return <Target className="h-5 w-5" />;
-      case 'team':
-        return <Users className="h-5 w-5" />;
-      default:
-        return <Bell className="h-5 w-5" />;
+  const handleMarkAllAsRead = async () => {
+    if (user?.id) {
+      await markAllAsRead(user.id);
+      toast({
+        title: 'Success',
+        description: 'All notifications marked as read',
+      });
     }
   };
 
-  const getTimestamp = (date: Date) => {
-    const diff = Date.now() - date.getTime();
-    const minutes = Math.floor(diff / 1000 / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
+  const handleDeleteNotification = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id);
 
-    if (days > 0) return `${days}d ago`;
-    if (hours > 0) return `${hours}h ago`;
-    if (minutes > 0) return `${minutes}m ago`;
-    return 'Just now';
+      if (error) throw error;
+
+      if (user?.id) {
+        await fetchNotifications(user.id);
+      }
+      
+      toast({
+        title: 'Success',
+        description: 'Notification deleted',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete notification',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (!user?.id) return;
+    
+    if (confirm('Are you sure you want to clear all notifications?')) {
+      try {
+        const { error } = await supabase
+          .from('notifications')
+          .delete()
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        await fetchNotifications(user.id);
+        
+        toast({
+          title: 'Success',
+          description: 'All notifications cleared',
+        });
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to clear notifications',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
+  const handleNotificationClick = async (notification: any) => {
+    if (!notification.read) {
+      await markAsRead(notification.id);
+    }
+
+    if (notification.task_id) {
+      navigate('/tasks');
+    } else if (notification.organization_id) {
+      navigate(`/organizations/${notification.organization_id}`);
+    }
+  };
+
+  const getIcon = (type: string) => {
+    if (type.includes('task')) return <Calendar className="h-5 w-5" />;
+    if (type.includes('habit')) return <Target className="h-5 w-5" />;
+    if (type.includes('member')) return <Users className="h-5 w-5" />;
+    return <Bell className="h-5 w-5" />;
+  };
+
+  const getIconColor = (type: string) => {
+    if (type.includes('task')) return 'bg-blue-500/10 text-blue-500';
+    if (type.includes('habit')) return 'bg-green-500/10 text-green-500';
+    if (type.includes('member')) return 'bg-purple-500/10 text-purple-500';
+    return 'bg-gray-500/10 text-gray-500';
   };
 
   const filteredNotifications = notifications.filter(
@@ -110,11 +134,11 @@ const Notifications = () => {
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        <Button variant="outline" size="sm" onClick={markAllAsRead}>
+        <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}>
           <CheckCheck className="mr-2 h-4 w-4" />
           Mark all as read
         </Button>
-        <Button variant="outline" size="sm" onClick={clearAll}>
+        <Button variant="outline" size="sm" onClick={handleClearAll}>
           <Trash2 className="mr-2 h-4 w-4" />
           Clear all
         </Button>
@@ -123,9 +147,8 @@ const Notifications = () => {
       <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
         <TabsList>
           <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="task">Tasks</TabsTrigger>
-          <TabsTrigger value="habit">Habits</TabsTrigger>
-          <TabsTrigger value="team">Team</TabsTrigger>
+          <TabsTrigger value="task_created">Tasks</TabsTrigger>
+          <TabsTrigger value="member_added">Team</TabsTrigger>
         </TabsList>
 
         <TabsContent value={filter} className="mt-6">
@@ -142,24 +165,20 @@ const Notifications = () => {
                 {filteredNotifications.map(notification => (
                   <Card
                     key={notification.id}
-                    className={`cursor-pointer transition-colors ${
+                    className={`cursor-pointer transition-colors hover:bg-accent/5 ${
                       !notification.read ? 'bg-primary/5 border-primary/20' : ''
                     }`}
+                    onClick={() => handleNotificationClick(notification)}
                   >
                     <CardContent className="p-4">
                       <div className="flex gap-4">
-                        <div className={`p-2 rounded-full h-fit ${
-                          notification.type === 'task' ? 'bg-blue-500/10 text-blue-500' :
-                          notification.type === 'habit' ? 'bg-green-500/10 text-green-500' :
-                          'bg-purple-500/10 text-purple-500'
-                        }`}>
+                        <div className={`p-2 rounded-full h-fit ${getIconColor(notification.type)}`}>
                           {getIcon(notification.type)}
                         </div>
                         <div className="flex-1 space-y-1">
                           <div className="flex items-start justify-between gap-4">
                             <div>
-                              <h3 className="font-semibold">{notification.title}</h3>
-                              <p className="text-sm text-muted-foreground mt-1">
+                              <p className="text-sm">
                                 {notification.message}
                               </p>
                             </div>
@@ -169,14 +188,17 @@ const Notifications = () => {
                           </div>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="text-xs text-muted-foreground">
-                              {getTimestamp(notification.timestamp)}
+                              {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                             </span>
                             <div className="flex gap-1">
                               {!notification.read && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => markAsRead(notification.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    markAsRead(notification.id);
+                                  }}
                                 >
                                   Mark as read
                                 </Button>
@@ -184,7 +206,10 @@ const Notifications = () => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => deleteNotification(notification.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteNotification(notification.id);
+                                }}
                               >
                                 Delete
                               </Button>
