@@ -19,6 +19,7 @@ interface OrganizationsState {
   organizations: Organization[];
   members: MemberWithProfile[];
   loading: boolean;
+  error: string | null;
   fetchOrganizations: () => Promise<void>;
   fetchMembers: (organizationId: string) => Promise<void>;
   createOrganization: (org: Omit<OrganizationInsert, 'owner_id'>) => Promise<Organization | null>;
@@ -33,45 +34,42 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
   organizations: [],
   members: [],
   loading: false,
+  error: null,
 
   fetchOrganizations: async () => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session?.user) {
+        throw new Error('Not authenticated');
+      }
+
+      // Fetch organizations where user is a member
+      const { data: memberOrgs, error: memberError } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', session.session.user.id);
+
+      if (memberError) throw memberError;
+
+      const orgIds = memberOrgs?.map(m => m.organization_id) || [];
+
+      if (orgIds.length === 0) {
+        set({ organizations: [], loading: false });
+        return;
+      }
+
       const { data, error } = await supabase
         .from('organizations')
         .select('*')
+        .in('id', orgIds)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      set({ organizations: data || [] });
-      
-      // Set up real-time subscription
-      const channel = supabase
-        .channel('organizations-changes')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'organizations' },
-          (payload) => {
-            if (payload.eventType === 'INSERT' && payload.new) {
-              set((state) => ({
-                organizations: [payload.new as Organization, ...state.organizations]
-              }));
-            } else if (payload.eventType === 'UPDATE' && payload.new) {
-              set((state) => ({
-                organizations: state.organizations.map(o => 
-                  o.id === (payload.new as Organization).id ? payload.new as Organization : o
-                )
-              }));
-            } else if (payload.eventType === 'DELETE' && payload.old) {
-              set((state) => ({
-                organizations: state.organizations.filter(o => o.id !== (payload.old as Organization).id)
-              }));
-            }
-          }
-        )
-        .subscribe();
-    } catch (error) {
+      set({ organizations: data || [], error: null });
+    } catch (error: any) {
       console.error('Error fetching organizations:', error);
+      set({ error: error.message, organizations: [] });
     } finally {
       set({ loading: false });
     }

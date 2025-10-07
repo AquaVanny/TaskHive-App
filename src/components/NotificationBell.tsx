@@ -21,11 +21,17 @@ export const NotificationBell = () => {
 
   useEffect(() => {
     if (user?.id) {
+      // Initial fetch
       fetchNotifications(user.id);
+      
+      // Subscribe to real-time updates
       const unsubscribe = subscribeToNotifications(user.id);
-      return () => unsubscribe();
+      
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
     }
-  }, [user?.id, fetchNotifications, subscribeToNotifications]);
+  }, [user?.id]);
 
   const handleNotificationClick = async (notificationId: string, taskId?: string, organizationId?: string) => {
     await markAsRead(notificationId);

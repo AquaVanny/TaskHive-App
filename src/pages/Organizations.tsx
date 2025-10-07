@@ -23,6 +23,7 @@ const Organizations = () => {
   const {
     organizations,
     loading,
+    error,
     fetchOrganizations,
     createOrganization,
     joinOrganization,
@@ -39,6 +40,16 @@ const Organizations = () => {
   useEffect(() => {
     fetchOrganizations();
   }, [fetchOrganizations]);
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error,
+        variant: 'destructive',
+      });
+    }
+  }, [error, toast]);
 
   const onSubmitCreate = async (data: any) => {
     try {

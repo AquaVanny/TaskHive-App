@@ -59,15 +59,18 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
     const unsubscribe = notificationService.subscribeToNotifications(
       userId,
       (notification) => {
+        // Add notification to store
         set({
           notifications: [notification, ...get().notifications],
           unreadCount: get().unreadCount + 1,
         });
 
-        // Show browser notification
+        // Show browser notification (will request permission if not granted)
         notificationService.sendBrowserNotification(notification.message, {
           body: notification.message,
           tag: notification.id,
+        }).catch(err => {
+          console.log('Browser notification failed:', err);
         });
       }
     );
