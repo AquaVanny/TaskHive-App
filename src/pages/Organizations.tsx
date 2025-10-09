@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Users, Plus, Copy, UserPlus, LogOut, Settings, ArrowRight } from 'lucide-react';
 import { useOrganizationsStore } from '@/store/organizationsStore';
@@ -40,6 +41,32 @@ const Organizations = () => {
   useEffect(() => {
     fetchOrganizations();
   }, [fetchOrganizations]);
+
+  // Set up real-time subscription for organization changes
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('organization-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'organization_members',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          // Refresh organizations when membership changes
+          fetchOrganizations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchOrganizations]);
 
   useEffect(() => {
     if (error) {
