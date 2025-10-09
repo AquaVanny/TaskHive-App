@@ -82,44 +82,58 @@ export const useTasksStore = create<TasksState>((set, get) => ({
       
       set((state) => ({ tasks: [data, ...state.tasks] }));
       
-      // Send in-app notifications
-      if (data.organization_id) {
-        const { data: members } = await supabase
-          .from('organization_members')
-          .select('user_id')
-          .eq('organization_id', data.organization_id);
+      // Send notifications (don't let notification errors block task creation)
+      try {
+        // Send in-app notifications
+        if (data.organization_id) {
+          const { data: members } = await supabase
+            .from('organization_members')
+            .select('user_id')
+            .eq('organization_id', data.organization_id);
 
-        if (members) {
-          for (const member of members) {
-            if (member.user_id !== session.session.user.id) {
-              await notificationService.createNotification({
-                user_id: member.user_id,
-                message: `New task created: ${data.title}`,
-                type: 'task_created',
-                organization_id: data.organization_id,
-                task_id: data.id,
-              });
+          if (members) {
+            for (const member of members) {
+              if (member.user_id !== session.session.user.id) {
+                try {
+                  await notificationService.createNotification({
+                    user_id: member.user_id,
+                    message: `New task created: ${data.title}`,
+                    type: 'task_created',
+                    organization_id: data.organization_id,
+                    task_id: data.id,
+                  });
+                } catch (notifError) {
+                  console.error('Error creating notification:', notifError);
+                }
+              }
             }
           }
         }
-      }
 
-      if (data.assigned_to && data.assigned_to !== session.session.user.id) {
-        await notificationService.createNotification({
-          user_id: data.assigned_to,
-          message: `You have been assigned a task: ${data.title}`,
-          type: 'task_assigned',
-          organization_id: data.organization_id,
-          task_id: data.id,
-        });
-      }
-      
-      // Browser notification
-      await notificationService.notifyTaskCreated(data.title);
-      
-      // Schedule reminder
-      if (data.due_date) {
-        notificationService.scheduleTaskReminder(data.title, new Date(data.due_date));
+        if (data.assigned_to && data.assigned_to !== session.session.user.id) {
+          try {
+            await notificationService.createNotification({
+              user_id: data.assigned_to,
+              message: `You have been assigned a task: ${data.title}`,
+              type: 'task_assigned',
+              organization_id: data.organization_id,
+              task_id: data.id,
+            });
+          } catch (notifError) {
+            console.error('Error creating assignment notification:', notifError);
+          }
+        }
+        
+        // Browser notification
+        await notificationService.notifyTaskCreated(data.title);
+        
+        // Schedule reminder
+        if (data.due_date) {
+          notificationService.scheduleTaskReminder(data.title, new Date(data.due_date));
+        }
+      } catch (notificationError) {
+        console.error('Error sending notifications:', notificationError);
+        // Don't throw - task was created successfully
       }
       
       return data;
@@ -149,28 +163,42 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         ),
       });
 
-      // Send notification if task is completed
-      if (updates.status === 'completed') {
-        if (data.user_id !== session.session.user.id) {
-          await notificationService.createNotification({
-            user_id: data.user_id,
-            message: `Task completed: ${data.title}`,
-            type: 'task_completed',
-            organization_id: data.organization_id,
-            task_id: data.id,
-          });
+      // Send notifications (don't let notification errors block task update)
+      try {
+        // Send notification if task is completed
+        if (updates.status === 'completed') {
+          if (data.user_id !== session.session.user.id) {
+            try {
+              await notificationService.createNotification({
+                user_id: data.user_id,
+                message: `Task completed: ${data.title}`,
+                type: 'task_completed',
+                organization_id: data.organization_id,
+                task_id: data.id,
+              });
+            } catch (notifError) {
+              console.error('Error creating completion notification:', notifError);
+            }
+          }
         }
-      }
 
-      // Send notification if task is assigned
-      if (updates.assigned_to && updates.assigned_to !== data.user_id) {
-        await notificationService.createNotification({
-          user_id: updates.assigned_to,
-          message: `You have been assigned a task: ${data.title}`,
-          type: 'task_assigned',
-          organization_id: data.organization_id,
-          task_id: data.id,
-        });
+        // Send notification if task is assigned
+        if (updates.assigned_to && updates.assigned_to !== data.user_id) {
+          try {
+            await notificationService.createNotification({
+              user_id: updates.assigned_to,
+              message: `You have been assigned a task: ${data.title}`,
+              type: 'task_assigned',
+              organization_id: data.organization_id,
+              task_id: data.id,
+            });
+          } catch (notifError) {
+            console.error('Error creating assignment notification:', notifError);
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error sending notifications:', notificationError);
+        // Don't throw - task was updated successfully
       }
     } catch (error) {
       console.error('Error updating task:', error);

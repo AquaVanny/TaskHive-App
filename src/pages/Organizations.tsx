@@ -53,25 +53,30 @@ const Organizations = () => {
 
   const onSubmitCreate = async (data: any) => {
     try {
-      console.log('Form submitted with data:', data);
-      const org = await createOrganization(data);
-      if (org) {
-        toast({ title: 'Organization created successfully' });
-        setIsDialogOpen(false);
-        reset();
-        // Refresh organizations
-        await fetchOrganizations();
-      } else {
+      if (!data.name || data.name.trim() === '') {
         toast({ 
-          title: 'Error creating organization', 
-          description: 'Please try again',
+          title: 'Name required', 
+          description: 'Please enter a team name',
           variant: 'destructive' 
         });
+        return;
+      }
+
+      const org = await createOrganization({
+        name: data.name.trim(),
+        description: data.description?.trim() || null,
+      });
+      
+      if (org) {
+        toast({ title: 'Team created successfully' });
+        setIsDialogOpen(false);
+        reset();
+        await fetchOrganizations();
       }
     } catch (error: any) {
       console.error('Form submission error:', error);
       toast({ 
-        title: 'Error creating organization', 
+        title: 'Error creating team', 
         description: error.message || 'Please try again',
         variant: 'destructive' 
       });
@@ -80,14 +85,25 @@ const Organizations = () => {
 
   const onSubmitJoin = async (data: any) => {
     try {
-      await joinOrganization(data.invite_code);
-      toast({
-        title: 'Success',
-        description: 'You have successfully joined the team',
-      });
-      setIsDialogOpen(false);
-      reset();
-      await fetchOrganizations();
+      if (!data.invite_code || data.invite_code.trim() === '') {
+        toast({
+          title: 'Code required',
+          description: 'Please enter an invite code',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const success = await joinOrganization(data.invite_code.trim());
+      if (success) {
+        toast({
+          title: 'Success',
+          description: 'You have successfully joined the team',
+        });
+        setIsDialogOpen(false);
+        reset();
+        await fetchOrganizations();
+      }
     } catch (error: any) {
       toast({
         title: 'Error',

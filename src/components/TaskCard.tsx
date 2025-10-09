@@ -34,19 +34,22 @@ export const TaskCard = ({ task, onToggle, onEdit, onDelete }: TaskCardProps) =>
     <Card className="group hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <button
+          <Button
+            size="icon"
+            variant="ghost"
             onClick={() => onToggle(task.id, task.status || 'pending')}
             className={cn(
-              'mt-0.5 transition-colors',
-              statusColors[task.status as keyof typeof statusColors]
+              'h-8 w-8 p-0 transition-all hover:scale-110',
+              isCompleted && 'text-emerald-500 hover:text-emerald-600'
             )}
+            title={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
           >
             {isCompleted ? (
-              <CheckCircle2 className="h-5 w-5" />
+              <CheckCircle2 className="h-6 w-6" />
             ) : (
-              <Circle className="h-5 w-5" />
+              <Circle className="h-6 w-6 hover:text-emerald-500" />
             )}
-          </button>
+          </Button>
 
           <div className="flex-1 min-w-0">
             <h3
