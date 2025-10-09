@@ -124,7 +124,13 @@ const Settings = () => {
                 <Switch
                   id="email-notif"
                   checked={emailNotifications}
-                  onCheckedChange={setEmailNotifications}
+                  onCheckedChange={(checked) => {
+                    setEmailNotifications(checked);
+                    toast({
+                      title: 'Email notifications ' + (checked ? 'enabled' : 'disabled'),
+                      description: checked ? 'You will receive email notifications' : 'Email notifications turned off',
+                    });
+                  }}
                 />
               </div>
 
@@ -138,7 +144,13 @@ const Settings = () => {
                 <Switch
                   id="push-notif"
                   checked={pushNotifications}
-                  onCheckedChange={setPushNotifications}
+                  onCheckedChange={(checked) => {
+                    setPushNotifications(checked);
+                    toast({
+                      title: 'Push notifications ' + (checked ? 'enabled' : 'disabled'),
+                      description: checked ? 'You will receive push notifications' : 'Push notifications turned off',
+                    });
+                  }}
                 />
               </div>
 
@@ -152,7 +164,13 @@ const Settings = () => {
                 <Switch
                   id="sound"
                   checked={soundEnabled}
-                  onCheckedChange={setSoundEnabled}
+                  onCheckedChange={(checked) => {
+                    setSoundEnabled(checked);
+                    toast({
+                      title: 'Notification sound ' + (checked ? 'enabled' : 'disabled'),
+                      description: checked ? 'Sounds will play for notifications' : 'Notification sounds turned off',
+                    });
+                  }}
                 />
               </div>
             </CardContent>
@@ -179,7 +197,13 @@ const Settings = () => {
                 </div>
                 <Switch 
                   checked={activityStatus}
-                  onCheckedChange={setActivityStatus}
+                  onCheckedChange={(checked) => {
+                    setActivityStatus(checked);
+                    toast({
+                      title: 'Activity status ' + (checked ? 'visible' : 'hidden'),
+                      description: checked ? 'Team members can see when you\'re active' : 'Your activity status is now hidden',
+                    });
+                  }}
                 />
               </div>
 
@@ -192,7 +216,13 @@ const Settings = () => {
                 </div>
                 <Switch 
                   checked={analytics}
-                  onCheckedChange={setAnalytics}
+                  onCheckedChange={(checked) => {
+                    setAnalytics(checked);
+                    toast({
+                      title: 'Analytics sharing ' + (checked ? 'enabled' : 'disabled'),
+                      description: checked ? 'Thank you for helping improve TaskHive' : 'Analytics sharing turned off',
+                    });
+                  }}
                 />
               </div>
             </CardContent>

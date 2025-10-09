@@ -2,6 +2,8 @@ import { X, BarChart3, Settings, HelpCircle, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/store/authStore";
+import { useToast } from "@/hooks/use-toast";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -10,10 +12,30 @@ interface SidebarProps {
 
 export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const navigate = useNavigate();
+  const { signOut } = useAuthStore();
+  const { toast } = useToast();
 
   const handleNavigation = (path: string) => {
     navigate(path);
     onClose();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been signed out of your account",
+      });
+      navigate("/login");
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Logout failed",
+        description: "There was an error signing out. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -72,7 +94,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           <Button
             variant="ghost"
             className="justify-start text-destructive hover:text-destructive"
-            onClick={() => handleNavigation("/login")}
+            onClick={handleLogout}
           >
             <LogOut className="mr-2 h-5 w-5" />
             Logout
