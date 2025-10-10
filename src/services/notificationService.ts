@@ -4,7 +4,7 @@ export interface Notification {
   id: string;
   user_id: string;
   message: string;
-  type: 'task_created' | 'task_assigned' | 'task_completed' | 'member_added' | 'member_removed';
+  type: 'task_created' | 'task_assigned' | 'task_completed' | 'task_reminder' | 'member_added' | 'member_removed';
   organization_id?: string;
   task_id?: string;
   created_at: string;

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { notificationService } from '@/services/notificationService';
+import { reminderService } from '@/services/reminderService';
 
 type Task = Database['public']['Tables']['tasks']['Row'];
 type TaskInsert = Database['public']['Tables']['tasks']['Insert'];
@@ -127,9 +128,9 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         // Browser notification
         await notificationService.notifyTaskCreated(data.title);
         
-        // Schedule reminder
+        // Schedule reminder (30 minutes before due date)
         if (data.due_date) {
-          notificationService.scheduleTaskReminder(data.title, new Date(data.due_date));
+          await reminderService.scheduleReminder(data.id, session.session.user.id, new Date(data.due_date));
         }
       } catch (notificationError) {
         console.error('Error sending notifications:', notificationError);
@@ -165,8 +166,10 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 
       // Send notifications (don't let notification errors block task update)
       try {
-        // Send notification if task is completed
+        // Cancel reminder if task is completed
         if (updates.status === 'completed') {
+          await reminderService.cancelReminder(id);
+          
           if (data.user_id !== session.session.user.id) {
             try {
               await notificationService.createNotification({
@@ -180,6 +183,11 @@ export const useTasksStore = create<TasksState>((set, get) => ({
               console.error('Error creating completion notification:', notifError);
             }
           }
+        }
+
+        // Reschedule reminder if due date is updated
+        if (updates.due_date && updates.status !== 'completed') {
+          await reminderService.scheduleReminder(id, data.user_id, new Date(updates.due_date));
         }
 
         // Send notification if task is assigned

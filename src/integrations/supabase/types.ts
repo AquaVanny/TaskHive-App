@@ -281,6 +281,44 @@ export type Database = {
           },
         ]
       }
+      task_reminders: {
+        Row: {
+          created_at: string | null
+          id: string
+          reminder_scheduled_at: string
+          reminder_sent: boolean | null
+          task_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reminder_scheduled_at: string
+          reminder_sent?: boolean | null
+          task_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reminder_scheduled_at?: string
+          reminder_sent?: boolean | null
+          task_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_reminders_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assigned_to: string | null

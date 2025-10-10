@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { useForm } from 'react-hook-form';
 import { useToast } from '@/hooks/use-toast';
 import { Loading } from '@/components/Loading';
@@ -38,6 +39,7 @@ const Tasks = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [selectedOrgId, setSelectedOrgId] = useState<string>('');
+  const [selectedDueDate, setSelectedDueDate] = useState<Date | undefined>();
 
   const { register, handleSubmit, reset, setValue, watch } = useForm();
   const watchOrgId = watch('organization_id');
@@ -59,7 +61,7 @@ const Tasks = () => {
       setValue('description', editingTask.description || '');
       setValue('priority', editingTask.priority);
       setValue('category', editingTask.category || '');
-      setValue('due_date', editingTask.due_date ? editingTask.due_date.split('T')[0] : '');
+      setSelectedDueDate(editingTask.due_date ? new Date(editingTask.due_date) : undefined);
       setValue('organization_id', editingTask.organization_id || '');
       setValue('assigned_to', editingTask.assigned_to || '');
       if (editingTask.organization_id) {
@@ -67,6 +69,7 @@ const Tasks = () => {
       }
     } else {
       reset();
+      setSelectedDueDate(undefined);
     }
   }, [editingTask, setValue, reset, fetchMembers]);
 
@@ -83,7 +86,7 @@ const Tasks = () => {
       const taskData = {
         ...data,
         user_id: user?.id,
-        due_date: data.due_date ? new Date(data.due_date).toISOString() : null,
+        due_date: selectedDueDate ? selectedDueDate.toISOString() : null,
         organization_id: data.organization_id || null,
         assigned_to: data.assigned_to || null,
       };
@@ -101,6 +104,7 @@ const Tasks = () => {
       setIsDialogOpen(false);
       setEditingTask(null);
       reset();
+      setSelectedDueDate(undefined);
     } catch (error) {
       toast({ title: 'Error saving task', variant: 'destructive' });
     }
@@ -123,6 +127,7 @@ const Tasks = () => {
   const handleCreateNew = () => {
     setEditingTask(null);
     reset();
+    setSelectedDueDate(undefined);
     setIsDialogOpen(true);
   };
 
@@ -254,8 +259,12 @@ const Tasks = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="due_date">Due Date</Label>
-              <Input id="due_date" type="date" {...register('due_date')} />
+              <Label htmlFor="due_date">Due Date & Time</Label>
+              <DateTimePicker 
+                date={selectedDueDate}
+                setDate={setSelectedDueDate}
+                placeholder="Pick a deadline date and time"
+              />
             </div>
 
             <div className="space-y-2">
