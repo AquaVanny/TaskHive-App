@@ -36,7 +36,7 @@ const Organizations = () => {
   const [selectedOrg, setSelectedOrg] = useState<any>(null);
   const [actionType, setActionType] = useState<'create' | 'join'>('create');
 
-  const { register, handleSubmit, reset } = useForm();
+  const { register, handleSubmit, reset, getValues } = useForm({ shouldUnregister: true });
 
   useEffect(() => {
     fetchOrganizations();
@@ -112,6 +112,7 @@ const Organizations = () => {
 
   const onSubmitJoin = async (data: any) => {
     try {
+      console.log('onSubmitJoin called with data:', data);
       if (!data.invite_code || data.invite_code.trim() === '') {
         toast({
           title: 'Code required',
@@ -332,7 +333,15 @@ const Organizations = () => {
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit">Join Team</Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      console.log('Join button clicked, current values:', getValues());
+                      onSubmitJoin(getValues());
+                    }}
+                  >
+                    Join Team
+                  </Button>
                 </div>
               </form>
             </TabsContent>

@@ -203,13 +203,18 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
 
       if (memberError) throw memberError;
 
-      // Send notification to organization owner
-      await notificationService.createNotification({
-        user_id: org.owner_id,
-        message: `A new member joined ${org.name}`,
-        type: 'member_added',
-        organization_id: org.id,
-      });
+      // Send notification to organization owner (non-blocking)
+      try {
+        await notificationService.createNotification({
+          user_id: org.owner_id,
+          message: `A new member joined ${org.name}`,
+          type: 'member_added',
+          organization_id: org.id,
+        });
+      } catch (notifyError) {
+        console.warn('Notification not sent due to RLS or other error:', notifyError);
+        // Do not block the join flow on notification errors
+      }
 
       // Refresh organizations list
       await get().fetchOrganizations();

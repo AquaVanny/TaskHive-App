@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { enablePushForCurrentUser } from '@/lib/push';
 
 interface AuthState {
   user: User | null;
@@ -31,12 +32,19 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ loading: true });
     
     // Set up auth state listener
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange(async (_event, session) => {
       set({ session, user: session?.user ?? null, loading: false });
+      if (session?.user?.id) {
+        // Fire-and-forget enabling push (non-blocking)
+        enablePushForCurrentUser(session.user.id);
+      }
     });
     
     // Get initial session
     const { data: { session } } = await supabase.auth.getSession();
     set({ session, user: session?.user ?? null, loading: false });
+    if (session?.user?.id) {
+      enablePushForCurrentUser(session.user.id);
+    }
   },
 }));
