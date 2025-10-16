@@ -14,7 +14,7 @@ import { useToast } from '@/components/ui/use-toast';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { tasks, fetchTasks, toggleTaskStatus, deleteTask } = useTasksStore();
+  const { tasks, fetchTasks, toggleTaskStatus, deleteTask, setupRealtimeSubscription, cleanupRealtimeSubscription } = useTasksStore();
   const { habits, completions, fetchHabits, fetchCompletions, getHabitStreak } = useHabitsStore();
   const { toast } = useToast();
   
@@ -25,6 +25,7 @@ const Dashboard = () => {
     fetchTasks();
     fetchHabits();
     fetchCompletions();
+    setupRealtimeSubscription();
 
     const hour = new Date().getHours();
     if (hour < 12) setGreeting('Good morning');
@@ -35,7 +36,11 @@ const Dashboard = () => {
     if ('Notification' in window) {
       setNotificationPermission(Notification.permission);
     }
-  }, [fetchTasks, fetchHabits, fetchCompletions]);
+    
+    return () => {
+      cleanupRealtimeSubscription();
+    };
+  }, [fetchTasks, fetchHabits, fetchCompletions, setupRealtimeSubscription, cleanupRealtimeSubscription]);
 
   const requestNotificationPermission = async () => {
     const granted = await notificationService.requestPermission();
@@ -151,6 +156,7 @@ const Dashboard = () => {
                   task={task}
                   onToggle={toggleTaskStatus}
                   onDelete={deleteTask}
+                  currentUserId={user?.id}
                 />
               ))}
             </div>

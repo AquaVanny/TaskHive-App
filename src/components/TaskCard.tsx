@@ -13,6 +13,7 @@ interface TaskCardProps {
   onToggle: (id: string, currentStatus: string) => void;
   onEdit?: (task: Task) => void;
   onDelete: (id: string) => void;
+  currentUserId?: string;
 }
 
 const priorityColors = {
@@ -27,8 +28,9 @@ const statusColors = {
   completed: 'text-emerald-500',
 };
 
-export const TaskCard = ({ task, onToggle, onEdit, onDelete }: TaskCardProps) => {
+export const TaskCard = ({ task, onToggle, onEdit, onDelete, currentUserId }: TaskCardProps) => {
   const isCompleted = task.status === 'completed';
+  const canModify = currentUserId && task.user_id === currentUserId;
 
   return (
     <Card className="group hover:shadow-md transition-shadow">
@@ -99,26 +101,28 @@ export const TaskCard = ({ task, onToggle, onEdit, onDelete }: TaskCardProps) =>
             </div>
           </div>
 
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {onEdit && (
+          {canModify && (
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {onEdit && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => onEdit(task)}
+                  className="h-8 w-8"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => onEdit(task)}
-                className="h-8 w-8"
+                onClick={() => onDelete(task.id)}
+                className="h-8 w-8 text-destructive hover:text-destructive"
               >
-                <Edit className="h-4 w-4" />
+                <Trash2 className="h-4 w-4" />
               </Button>
-            )}
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => onDelete(task.id)}
-              className="h-8 w-8 text-destructive hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

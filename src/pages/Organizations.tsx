@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { Users, Plus, Copy, UserPlus, LogOut, Settings, ArrowRight } from 'lucide-react';
+import { Users, Plus, Copy, UserPlus, LogOut, Settings, ArrowRight, Trash2 } from 'lucide-react';
 import { useOrganizationsStore } from '@/store/organizationsStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ const Organizations = () => {
     createOrganization,
     joinOrganization,
     leaveOrganization,
+    deleteOrganization,
   } = useOrganizationsStore();
   const { toast } = useToast();
 
@@ -36,7 +37,7 @@ const Organizations = () => {
   const [selectedOrg, setSelectedOrg] = useState<any>(null);
   const [actionType, setActionType] = useState<'create' | 'join'>('create');
 
-  const { register, handleSubmit, reset, getValues } = useForm({ shouldUnregister: true });
+  const { register, handleSubmit, reset, getValues } = useForm();
 
   useEffect(() => {
     fetchOrganizations();
@@ -79,6 +80,7 @@ const Organizations = () => {
   }, [error, toast]);
 
   const onSubmitCreate = async (data: any) => {
+    console.log('onSubmitCreate called with data:', data);
     try {
       if (!data.name || data.name.trim() === '') {
         toast({ 
@@ -112,7 +114,6 @@ const Organizations = () => {
 
   const onSubmitJoin = async (data: any) => {
     try {
-      console.log('onSubmitJoin called with data:', data);
       if (!data.invite_code || data.invite_code.trim() === '') {
         toast({
           title: 'Code required',
@@ -146,13 +147,41 @@ const Organizations = () => {
     toast({ title: 'Invite code copied to clipboard' });
   };
 
-  const handleLeave = async (orgId: string) => {
-    if (confirm('Are you sure you want to leave this organization?')) {
+  const handleLeave = async (orgId: string, orgName: string) => {
+    if (confirm(`Are you sure you want to leave "${orgName}"?`)) {
       try {
         await leaveOrganization(orgId);
-        toast({ title: 'Left organization successfully' });
-      } catch (error) {
-        toast({ title: 'Error leaving organization', variant: 'destructive' });
+        toast({ 
+          title: 'Left successfully', 
+          description: `You have left ${orgName}` 
+        });
+        // Manually refresh to ensure the UI updates
+        await fetchOrganizations();
+      } catch (error: any) {
+        console.error('Leave error:', error);
+        toast({ 
+          title: 'Error leaving organization', 
+          description: error.message || 'Please try again',
+          variant: 'destructive' 
+        });
+      }
+    }
+  };
+
+  const handleDelete = async (orgId: string, orgName: string) => {
+    if (confirm(`Are you sure you want to delete "${orgName}"? This action cannot be undone and will remove all members.`)) {
+      try {
+        await deleteOrganization(orgId);
+        toast({ 
+          title: 'Organization deleted', 
+          description: 'The organization and all its data have been removed.' 
+        });
+      } catch (error: any) {
+        toast({ 
+          title: 'Error deleting organization', 
+          description: error.message || 'Please try again',
+          variant: 'destructive' 
+        });
       }
     }
   };
@@ -239,11 +268,20 @@ const Organizations = () => {
                       <ArrowRight className="mr-2 h-4 w-4" />
                       View Details
                     </Button>
-                    {!isOwner && (
+                    {isOwner ? (
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleLeave(org.id)}
+                        onClick={() => handleDelete(org.id, org.name)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleLeave(org.id, org.name)}
                       >
                         <LogOut className="h-4 w-4" />
                       </Button>
@@ -279,13 +317,18 @@ const Organizations = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={actionType} onValueChange={(v) => setActionType(v as any)}>
+          <Tabs value={actionType} onValueChange={(v) => {
+            setActionType(v as any);
+            reset();
+          }}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="create">Create</TabsTrigger>
               <TabsTrigger value="join">Join</TabsTrigger>
             </TabsList>
+          </Tabs>
 
-            <TabsContent value="create">
+          <div className="mt-4">
+            {actionType === 'create' ? (
               <form onSubmit={handleSubmit(onSubmitCreate)} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Team Name *</Label>
@@ -309,12 +352,12 @@ const Organizations = () => {
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit">Create Team</Button>
+                  <Button type="submit">
+                    Create Team
+                  </Button>
                 </div>
               </form>
-            </TabsContent>
-
-            <TabsContent value="join">
+            ) : (
               <form onSubmit={handleSubmit(onSubmitJoin)} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="invite_code">Invite Code *</Label>
@@ -333,19 +376,13 @@ const Organizations = () => {
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      console.log('Join button clicked, current values:', getValues());
-                      onSubmitJoin(getValues());
-                    }}
-                  >
+                  <Button type="submit">
                     Join Team
                   </Button>
                 </div>
               </form>
-            </TabsContent>
-          </Tabs>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

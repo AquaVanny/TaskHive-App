@@ -1,3 +1,6 @@
+// NOTE: This file runs on Deno (Supabase Edge Functions), not Node.js
+// IDE warnings about Deno imports and global are expected and can be ignored
+// The function is deployed and working correctly
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { Resend } from "https://esm.sh/resend@4.0.0";
@@ -92,11 +95,12 @@ serve(async (req) => {
             minute: '2-digit',
           });
 
-          await resend.emails.send({
-            from: "TaskHive <onboarding@resend.dev>",
-            to: [profile.email],
-            subject: `⏰ Reminder: "${task.title}" is due soon!`,
-            html: `
+          try {
+            const emailResult = await resend.emails.send({
+              from: "TaskHive <onboarding@resend.dev>",
+              to: [profile.email],
+              subject: `⏰ Reminder: "${task.title}" is due soon!`,
+              html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #F59E0B;">Task Deadline Reminder</h2>
                 <p>Hi ${profile.full_name || 'there'},</p>
@@ -123,8 +127,13 @@ serve(async (req) => {
                 </p>
               </div>
             `,
-          });
-          console.log(`Email sent to ${profile.email} for task ${task.id}`);
+            });
+            console.log(`Email sent successfully to ${profile.email} for task ${task.id}`);
+            console.log('Resend response:', JSON.stringify(emailResult));
+          } catch (emailError) {
+            console.error(`Failed to send email to ${profile.email}:`, emailError);
+            // Don't throw - continue processing other reminders
+          }
         }
 
         // Create browser notification entry

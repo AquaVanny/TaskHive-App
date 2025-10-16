@@ -30,7 +30,7 @@ const filterOptions = [
 
 const Tasks = () => {
   const { user } = useAuthStore();
-  const { tasks, loading, fetchTasks, createTask, updateTask, deleteTask, toggleTaskStatus } = useTasksStore();
+  const { tasks, loading, fetchTasks, createTask, updateTask, deleteTask, toggleTaskStatus, setupRealtimeSubscription, cleanupRealtimeSubscription } = useTasksStore();
   const { organizations, members, fetchOrganizations, fetchMembers } = useOrganizationsStore();
   const { toast } = useToast();
 
@@ -47,7 +47,12 @@ const Tasks = () => {
   useEffect(() => {
     fetchTasks();
     fetchOrganizations();
-  }, [fetchTasks, fetchOrganizations]);
+    setupRealtimeSubscription();
+    
+    return () => {
+      cleanupRealtimeSubscription();
+    };
+  }, [fetchTasks, fetchOrganizations, setupRealtimeSubscription, cleanupRealtimeSubscription]);
 
   useEffect(() => {
     if (watchOrgId) {
@@ -83,6 +88,9 @@ const Tasks = () => {
 
   const onSubmit = async (data: any) => {
     try {
+      console.log('Form data:', data);
+      console.log('Selected due date:', selectedDueDate);
+      
       const taskData = {
         ...data,
         user_id: user?.id,
@@ -91,11 +99,15 @@ const Tasks = () => {
         assigned_to: data.assigned_to || null,
       };
 
+      console.log('Task data being submitted:', taskData);
+
       if (editingTask) {
         await updateTask(editingTask.id, taskData);
         toast({ title: 'Task updated successfully' });
       } else {
+        console.log('Creating new task...');
         const newTask = await createTask(taskData);
+        console.log('Task created:', newTask);
         
         if (newTask) {
           toast({ title: 'Task created successfully' });
@@ -198,6 +210,7 @@ const Tasks = () => {
               onToggle={toggleTaskStatus}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              currentUserId={user?.id}
             />
           ))}
         </div>

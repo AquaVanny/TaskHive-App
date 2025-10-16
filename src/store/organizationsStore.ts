@@ -25,6 +25,7 @@ interface OrganizationsState {
   createOrganization: (org: Omit<OrganizationInsert, 'owner_id'>) => Promise<Organization | null>;
   joinOrganization: (inviteCode: string) => Promise<boolean>;
   leaveOrganization: (organizationId: string) => Promise<void>;
+  deleteOrganization: (organizationId: string) => Promise<void>;
   updateOrganization: (id: string, updates: Partial<Organization>) => Promise<void>;
   updateMemberRole: (organizationId: string, userId: string, role: string) => Promise<void>;
   removeMember: (organizationId: string, userId: string) => Promise<void>;
@@ -243,6 +244,34 @@ export const useOrganizationsStore = create<OrganizationsState>((set, get) => ({
       });
     } catch (error) {
       console.error('Error leaving organization:', error);
+      throw error;
+    }
+  },
+
+  deleteOrganization: async (organizationId: string) => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session?.user) throw new Error('Not authenticated');
+
+      // Verify user is the owner
+      const org = get().organizations.find(o => o.id === organizationId);
+      if (!org || org.owner_id !== session.session.user.id) {
+        throw new Error('Only the owner can delete this organization');
+      }
+
+      // Delete the organization (cascading deletes should handle members)
+      const { error } = await supabase
+        .from('organizations')
+        .delete()
+        .eq('id', organizationId);
+
+      if (error) throw error;
+
+      set({
+        organizations: get().organizations.filter((org) => org.id !== organizationId),
+      });
+    } catch (error) {
+      console.error('Error deleting organization:', error);
       throw error;
     }
   },

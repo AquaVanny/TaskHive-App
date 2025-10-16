@@ -43,11 +43,11 @@ export function DateTimePicker({ date, setDate, placeholder = "Pick a date and t
     }
   };
 
-  // Generate time options (every 15 minutes)
+  // Generate time options (every 5 minutes)
   const timeOptions = React.useMemo(() => {
     const options = [];
     for (let hour = 0; hour < 24; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
+      for (let minute = 0; minute < 60; minute += 5) {
         const time = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
         options.push(time);
       }

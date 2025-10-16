@@ -105,15 +105,12 @@ export const notificationService = {
       // Use service worker for more reliable notifications
       navigator.serviceWorker.ready.then((registration) => {
         registration.showNotification(title, {
-          icon: '/favicon.ico',
-          badge: '/favicon.ico',
           ...options,
         });
       });
     } else {
       // Fallback to regular notification
       new Notification(title, {
-        icon: '/favicon.ico',
         ...options,
       });
     }
