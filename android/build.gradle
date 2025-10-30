@@ -1,0 +1,70 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules
+
+buildscript {
+    ext {
+        // SDK and tools
+        compileSdkVersion = 35  // Android 15
+        minSdkVersion = 24      // Android 7.0
+        targetSdkVersion = 35   // Android 15
+        
+        // App version
+        versionCode = 1
+        versionName = '1.0'
+        
+        // Define Java version
+        javaVersion = JavaVersion.VERSION_21  // Using Java 21 for Android 15
+        
+        // Dependencies versions
+        androidxAppCompatVersion = '1.6.1'
+        androidxCoordinatorLayoutVersion = '1.2.0'
+        coreSplashScreenVersion = '1.0.1'
+        junitVersion = '4.13.2'
+        androidxJunitVersion = '1.1.5'
+        androidxEspressoCoreVersion = '3.5.1'
+        
+        // Kotlin
+        kotlinVersion = '1.9.22'  // Updated for better compatibility with Gradle 8.13.0
+        
+        // Firebase
+        firebaseBomVersion = '32.7.0'
+    }
+    
+    repositories {
+        google()
+        mavenCentral()
+    }
+    
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.5.0'
+        // Latest stable version that works well with Java 17
+        classpath 'com.google.gms:google-services:4.4.1'  // Latest stable version
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+
+// Configure project properties
+ext {
+    // AndroidX Core and other library versions
+    androidxCoreVersion = '1.12.0'     // Latest stable version
+    androidxCoreKtxVersion = '1.12.0'  // Latest stable version
+    androidxLifecycleVersion = '2.7.0'  // Updated for Android 15
+    
+    // Google Play Services
+    playServicesLocationVersion = '21.0.1'
+    
+    // Testing
+    junitVersion = '4.13.2'
+    testExtJunit = '1.1.5'
+    espressoCore = '3.5.1'
+}

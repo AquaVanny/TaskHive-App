@@ -13,11 +13,27 @@ export const Layout = () => {
       
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
-      <main className="flex-1 pb-16 md:pb-0">
-        <Outlet />
+      <main 
+        className="flex-1 w-full"
+        style={{
+          paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))',
+          paddingBottom: '4rem',
+          minHeight: '100vh'
+        }}
+      >
+        <div className="container mx-auto px-4">
+          <Outlet />
+        </div>
       </main>
       
-      <BottomNavigation />
+      <div 
+        className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t border-border md:hidden"
+        style={{
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)'
+        }}
+      >
+        <BottomNavigation />
+      </div>
     </div>
   );
 };

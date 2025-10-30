@@ -75,7 +75,23 @@ export const notificationService = {
     };
   },
 
+  isWebView(): boolean {
+    // Detect if running in WebView/mobile app wrapper
+    const ua = navigator.userAgent.toLowerCase();
+    return ua.includes('wv') || // Android WebView
+           ua.includes('appilix') ||
+           (window as any).isNativeApp === true; // Custom flag
+  },
+
   async requestPermission(): Promise<boolean> {
+    // For WebView apps, permission might need to be handled by native layer
+    if (this.isWebView()) {
+      console.log('Running in WebView - notifications handled by native app');
+      // Assume permission is granted if in WebView
+      // The native app should handle actual permissions
+      return true;
+    }
+
     if (!('Notification' in window)) {
       console.warn('This browser does not support notifications');
       return false;
@@ -86,8 +102,13 @@ export const notificationService = {
     }
 
     if (Notification.permission !== 'denied') {
-      const permission = await Notification.requestPermission();
-      return permission === 'granted';
+      try {
+        const permission = await Notification.requestPermission();
+        return permission === 'granted';
+      } catch (error) {
+        console.error('Error requesting notification permission:', error);
+        return false;
+      }
     }
 
     return false;

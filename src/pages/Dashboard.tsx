@@ -8,8 +8,8 @@ import { useAuthStore } from '@/store/authStore';
 import { TaskCard } from '@/components/TaskCard';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { notificationService } from '@/services/notificationService';
 import { useToast } from '@/components/ui/use-toast';
+import { useCapacitorNotifications } from '@/hooks/useCapacitorNotifications';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -19,7 +19,8 @@ const Dashboard = () => {
   const { toast } = useToast();
   
   const [greeting, setGreeting] = useState('');
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const { permissionStatus, requestPermission, isInitialized } = useCapacitorNotifications();
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
 
   useEffect(() => {
     fetchTasks();
@@ -32,30 +33,38 @@ const Dashboard = () => {
     else if (hour < 18) setGreeting('Good afternoon');
     else setGreeting('Good evening');
 
-    // Check notification permission
-    if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
-    }
+    // Notification permission is now handled by useCapacitorNotifications
     
     return () => {
       cleanupRealtimeSubscription();
     };
   }, [fetchTasks, fetchHabits, fetchCompletions, setupRealtimeSubscription, cleanupRealtimeSubscription]);
 
-  const requestNotificationPermission = async () => {
-    const granted = await notificationService.requestPermission();
-    if (granted) {
-      setNotificationPermission('granted');
+  const handleRequestNotification = async () => {
+    if (isRequestingPermission) return;
+    
+    try {
+      setIsRequestingPermission(true);
+      const result = await requestPermission();
+      
+      if (result === 'granted') {
+        // Success - the hook will handle the state update
+      } else if (result === 'denied') {
+        toast({
+          title: "Notifications Blocked",
+          description: "Please enable notifications in your device settings",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error requesting notification permission:', error);
       toast({
-        title: "Notifications Enabled",
-        description: "You'll now receive reminders for tasks and habits",
-      });
-    } else {
-      toast({
-        title: "Notifications Blocked",
-        description: "Enable notifications in your browser settings",
+        title: "Error",
+        description: "Failed to request notification permission",
         variant: "destructive",
       });
+    } finally {
+      setIsRequestingPermission(false);
     }
   };
 
@@ -84,10 +93,20 @@ const Dashboard = () => {
           </h1>
           <p className="text-muted-foreground mt-1">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
         </div>
-        {notificationPermission !== 'granted' && (
-          <Button onClick={requestNotificationPermission} variant="outline" size="sm">
+        {isInitialized && permissionStatus !== 'granted' && (
+          <Button 
+            onClick={handleRequestNotification} 
+            variant="outline" 
+            size="sm"
+            disabled={isRequestingPermission}
+            className="animate-fade-in"
+          >
             <Bell className="mr-2 h-4 w-4" />
-            Enable Notifications
+            {isRequestingPermission 
+              ? 'Enabling...' 
+              : permissionStatus === 'denied' 
+                ? 'Enable in Settings' 
+                : 'Enable Notifications'}
           </Button>
         )}
       </div>

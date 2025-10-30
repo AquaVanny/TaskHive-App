@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { scheduleTaskNotification, cancelTaskNotification } from '@/utils/notificationUtils';
 
 export interface Task {
   id: string;
@@ -45,22 +46,51 @@ export const taskService = {
       .single();
 
     if (error) throw error;
+    
+    // Schedule notification if due date is set
+    if (task.due_date) {
+      await scheduleTaskNotification({
+        id: data.id,
+        title: data.title,
+        due_date: data.due_date
+      });
+    }
+    
     return data as Task;
   },
 
   async updateTask(id: string, updates: Partial<Task>) {
     const { data, error } = await supabase
       .from('tasks')
-      .update(updates)
+      .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();
 
     if (error) throw error;
+    
+    // Update notification if due date was changed
+    if (updates.due_date) {
+      // Cancel existing notification
+      await cancelTaskNotification(id);
+      
+      // Schedule new notification if task is not completed
+      if (updates.status !== 'completed') {
+        await scheduleTaskNotification({
+          id: data.id,
+          title: data.title,
+          due_date: updates.due_date
+        });
+      }
+    }
+    
     return data as Task;
   },
 
   async deleteTask(id: string) {
+    // Cancel any scheduled notifications for this task
+    await cancelTaskNotification(id);
+    
     const { error } = await supabase
       .from('tasks')
       .delete()

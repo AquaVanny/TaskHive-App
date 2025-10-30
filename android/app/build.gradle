@@ -1,0 +1,114 @@
+apply plugin: 'com.android.application'
+apply plugin: 'com.google.gms.google-services'
+apply plugin: 'kotlin-android'
+
+android {
+    namespace "com.taskhive.app"
+    compileSdk rootProject.ext.compileSdkVersion
+    
+    defaultConfig {
+        applicationId "com.taskhive.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode rootProject.ext.versionCode
+        versionName rootProject.ext.versionName
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Enable multidex support
+        multiDexEnabled true
+        
+        aaptOptions {
+            // Files and dirs to omit from the packaged assets dir
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+        coreLibraryDesugaringEnabled true
+    }
+    
+    kotlinOptions {
+        jvmTarget = '21'
+    }
+    
+    // Build features and Java 8+ support
+    buildFeatures {
+        buildConfig true
+        viewBinding true
+    }
+    
+    // Enable core library desugaring for Java 8+ APIs on older devices
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+    }
+}
+
+repositories {
+    flatDir {
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    
+    // Core libraries
+    implementation "androidx.core:core-ktx:$rootProject.ext.androidxCoreKtxVersion"
+    implementation "androidx.appcompat:appcompat:1.6.1"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:$rootProject.ext.androidxLifecycleVersion"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$rootProject.ext.androidxLifecycleVersion"
+    implementation "androidx.core:core-splashscreen:1.0.1"
+    
+    // Multidex support
+    implementation 'androidx.multidex:multidex:2.0.1'
+    
+    // Core library desugaring for Java 8+ APIs
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+    
+    // Kotlin
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$rootProject.ext.kotlinVersion"
+    implementation 'androidx.core:core-ktx:1.12.0'
+    
+    // Capacitor
+    implementation project(':capacitor-android')
+    implementation project(':capacitor-cordova-android-plugins')
+    
+    // Firebase
+    implementation platform("com.google.firebase:firebase-bom:$rootProject.ext.firebaseBomVersion")
+    implementation 'com.google.firebase:firebase-analytics-ktx'
+    implementation 'com.google.firebase:firebase-messaging-ktx'
+    
+    // AndroidX Core and modern libraries
+    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.10.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    
+    // Desugaring for Java 8+ APIs
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+    
+    // Testing
+    testImplementation "junit:junit:$rootProject.ext.junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$rootProject.ext.testExtJunit"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$rootProject.ext.espressoCore"
+}
+
+// Apply capacitor build configuration
+apply from: 'capacitor.build.gradle'
+
+// Ensure the build doesn't fail if GMS services plugin is not found
+try {
+    apply plugin: 'com.google.gms.google-services'
+} catch (Exception e) {
+    logger.warn("Google Services plugin not found. Google Play Services will not be available.")
+}

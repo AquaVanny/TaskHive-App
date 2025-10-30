@@ -2,6 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Safe area handling for mobile devices */
+@supports (padding: max(0px)) {
+  .safe-top {
+    padding-top: calc(env(safe-area-inset-top) + 0.5rem);
+  }
+  
+  .safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+  }
+  
+  /* Ensure the app starts below the status bar */
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Fallback for browsers that don't support safe-area-inset */
+@supports not (padding: max(0px)) {
+  .safe-top {
+    padding-top: 2rem; /* Increased from 20px to 2rem for better spacing */
+  }
+  
+  .safe-bottom {
+    padding-bottom: 2rem; /* Increased from 20px to 2rem for better spacing */
+  }
+  
+  body {
+    padding-top: 1.5rem;
+  }
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
