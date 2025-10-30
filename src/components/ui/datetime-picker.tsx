@@ -157,6 +157,20 @@ export function DateTimePicker({ date, setDate, placeholder = "Pick a date and t
               </Button>
               <Button 
                 type="button" 
+                variant="outline" 
+                className="flex-1 h-12 text-base"
+                onClick={() => {
+                  // Close the popover without saving
+                  const popover = document.querySelector('[role="dialog"]');
+                  if (popover) {
+                    (popover as HTMLElement).style.display = 'none';
+                  }
+                }}
+              >
+                Reset
+              </Button>
+              <Button 
+                type="button" 
                 className="flex-1 h-12 text-base gap-1 bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={() => {
                   handleApply();
@@ -170,6 +184,7 @@ export function DateTimePicker({ date, setDate, placeholder = "Pick a date and t
                 <Check className="h-5 w-5" />
                 <span>Set Time</span>
               </Button>
+            </div>
           </div>
         </div>
       </PopoverContent>

@@ -93,22 +93,6 @@ const Dashboard = () => {
           </h1>
           <p className="text-muted-foreground mt-1">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
         </div>
-        {isInitialized && permissionStatus !== 'granted' && (
-          <Button 
-            onClick={handleRequestNotification} 
-            variant="outline" 
-            size="sm"
-            disabled={isRequestingPermission}
-            className="animate-fade-in"
-          >
-            <Bell className="mr-2 h-4 w-4" />
-            {isRequestingPermission 
-              ? 'Enabling...' 
-              : permissionStatus === 'denied' 
-                ? 'Enable in Settings' 
-                : 'Enable Notifications'}
-          </Button>
-        )}
       </div>
 
       {/* Stats Cards */}

@@ -1,6 +1,5 @@
 import { Menu } from "lucide-react";
 import { Button } from "./ui/button";
-import { NotificationBell } from "./NotificationBell";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -37,7 +36,6 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
         
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
           <h1 className="text-lg font-bold text-primary md:hidden">TaskHive</h1>
-          <NotificationBell />
         </div>
       </div>
     </header>
